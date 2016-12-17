@@ -1,0 +1,52 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN"
+  "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+<head>
+<meta name="generator" content="jemdoc, see http://jemdoc.jaboc.net/" />
+<meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+<link rel="stylesheet" href="jemdoc.css" type="text/css" />
+<title></title>
+</head>
+<body>
+<table summary="Table for page layout." id="tlayout">
+<tr valign="top">
+<td id="layout-menu">
+<div class="menu-category">Alan Malek</div>
+<div class="menu-item"><a href="index.html">home</a></div>
+<div class="menu-item"><a href="papers/Alan_Malek.pdf">CV</a></div>
+<div class="menu-item"><a href="minimax.html" class="current">minimax&nbsp;regret</a></div>
+</td>
+<td id="layout-content">
+<h1>Introduction to Minimax regret</h1>
+<p>I often get question about the meaning of minimax regret and how to calculate it, so here is a short introduction.</p>
+<p>Online learning describes the world as a repeated game; for each round <img class="eq" src="eqs/6952529034888239943-130.png" alt="1,ldots,T" style="vertical-align: -4px" />, the learner plays an action <img class="eq" src="eqs/7916859692673975366-130.png" alt="a_tinmathcal A" style="vertical-align: -4px" />, then nature plays a response <img class="eq" src="eqs/4033332444523548088-130.png" alt="x_tinmathcal X" style="vertical-align: -4px" />  (perhaps even adversarially chosen given the player's action), and the player witnesses and incurs the loss <img class="eq" src="eqs/3086764196976915216-130.png" alt="ell(a_t,x_t)" style="vertical-align: -5px" />. How can we measure the preformance of the player? Very simple strategies of nature can insure linearly growing  expected cumulative loss; even choosing <img class="eq" src="eqs/5999452984665080558-130.png" alt="x_t" style="vertical-align: -4px" /> i.i.d from some distribution is sufficient.
+Instead, we try to control regret, <img class="eq" src="eqs/1095997943556072258-130.png" alt="mathcal R" style="vertical-align: -1px" />, which is the difference between her cumulative loss and the cumulative loss of the best action in some comparison class. That is,</p>
+
+<div class="eqwl"><img class="eqwl" src="eqs/1934119807608401591-130.png" alt="  mathcal R = sum_tell(a_t,x_t)-L_T^*(x_1,ldots,x_T),  " />
+<br /></div><p>where <img class="eq" src="eqs/1216071255502852179-130.png" alt="L_T*(x_1,ldots,x_T)=min_a sum_tell(a,x_t)" style="vertical-align: -7px" />.
+Early work with a finite comparison class of size <img class="eq" src="eqs/9600028874-130.png" alt="K" style="vertical-align: -0px" /> and arbitrary bounded loss function described algorithms that have regret upper bounds of <img class="eq" src="eqs/6757936128911514278-130.png" alt="O(sqrt{Tlog K})" style="vertical-align: -5px" /> with lower bounds that show that any algorithm can be made to suffer regret of the same order (e.g. weighted majority and many others).</p>
+<p>There is a stronger notion of optimality where we guarantee achieving the best possible regret aganist all response sequence. For a single round game, the adversary can pick <img class="eq" src="eqs/6950203366055878053-130.png" alt="mathop{argmax}_x mathcal R(a_1,x)" style="vertical-align: -6px" />; therefore, the player should chose <img class="eq" src="eqs/1453079729247098374-130.png" alt="a_1" style="vertical-align: -3px" /> to minimize this worst-case regret. For two rounds, nature at round <img class="eq" src="eqs/6272018864-130.png" alt="1" style="vertical-align: -0px" /> plays assuming that the player will play the minimax response in round <img class="eq" src="eqs/6400019251-130.png" alt="2" style="vertical-align: -0px" />, and therefore the player at round 1 minimizes this maximum regret. Extending to <img class="eq" src="eqs/10752032341-130.png" alt="T" style="vertical-align: -0px" /> rounds,the value, or minimax regret, is defined as</p>
+
+<div class="eqwl"><img class="eqwl" src="eqs/4903466891493574177-130.png" alt="   V ~:=~ min_{a_1}max_{x_1}cdots min_{a_T}max_{x_T}quad mathcal R(a_1,x_1,ldots,a_T,x_T). " />
+<br /></div><p>Intuitively, this is simultaneously the minimum regret possible by the player and the maximum regret possible by nature. To evaluate the value, it is often convinient to write it out as a backwards induction. First, note that we can write the value as:</p>
+
+<div class="eqwl"><img class="eqwl" src="eqs/7740869501200085753-130.png" alt="    V~=~ min_{a_1}max_{x_1}cdots min_{a_T}max_{x_T} sum_{t=1}^Tell(a_t,x_t)-L_T^*(x_1,ldots,x_T)    " />
+<br /></div>
+<div class="eqwl"><img class="eqwl" src="eqs/270433259530666996-130.png" alt="       quad ~=~ min_{a_1}max_{x_1}ell(a_1,x_1)+min_{a_2}max_{x_2}ell(a_2,x_2)+ldots +min_{a_T}max_{x_T} ell(a_T,x_T)-L_T^*(x_1,ldots,x_T). " />
+<br /></div><p>where we have just moved terms around. It is then straightforward to check that recursively definite the value-to-go <img class="eq" src="eqs/1055288173214053050-130.png" alt="V(x_1,ldots, x_t)" style="vertical-align: -5px" /> with base case</p>
+
+<div class="eqwl"><img class="eqwl" src="eqs/4822145363512384257-130.png" alt=" V(x_1,ldots,x_{T}) ~=~ - min_{a} sum_{t=1}^T ell(a,x_t) " />
+<br /></div><p>and induction step</p>
+
+<div class="eqwl"><img class="eqwl" src="eqs/1774957617500138283-130.png" alt=" V(x_1,ldots,x_{t}) ~=~ min_{a_{t+1}} max_{x_{t+1}} ell(a_t,x_t) + V(x_1,ldots,x_{t+1}) " />
+<br /></div><p>will give the value for the base case of <img class="eq" src="eqs/1495230934591648944-130.png" alt="t=0" style="vertical-align: -1px" />. One can think of the value-to-go  <img class="eq" src="eqs/1761066680715338593-130.png" alt="V(x_1,ldots,x_t)" style="vertical-align: -5px" /> as essentially the regret if responses of <img class="eq" src="eqs/3235615005757968361-130.png" alt="x_1,ldots,x_t" style="vertical-align: -4px" /> were played in the first <img class="eq" src="eqs/14848044661-130.png" alt="t" style="vertical-align: -1px" /> rounds, then both players played optimally from then on. The reason that the optimal actions depends on the past <img class="eq" src="eqs/3235615005757968361-130.png" alt="x_1,ldots,x_t" style="vertical-align: -4px" /> is because <img class="eq" src="eqs/8490639714903199676-130.png" alt="L_T^*" style="vertical-align: -5px" /> depends on them. We need to account for the difficulty in the comparator when playing actions this round, as always choosing hard actions (to make <img class="eq" src="eqs/3086764196976915216-130.png" alt="ell(a_t,x_t)" style="vertical-align: -5px" /> large) may make <img class="eq" src="eqs/8490639714903199676-130.png" alt="L_T^*" style="vertical-align: -5px" /> large and therefore regret small</p>
+<div id="footer">
+<div id="footer-text">
+Page generated 2016-07-14 14:54:19 PDT, by <a href="http://jemdoc.jaboc.net/">jemdoc</a>.
+</div>
+</div>
+</td>
+</tr>
+</table>
+</body>
+</html>
