@@ -1,23 +1,30 @@
 # jemdoc: menu{MENU}{index.html}
 
 ~~~
-{}{img_left}{headshot.jpg}{Me}{200x}{301px}{http://eecs.berkeley.edu/~malek}
+{}{img_left}{headshot.jpg}{Me}{200x}{301px}{http://alanmalek.com}
 Alan Malek
 
-[http://www.eecs.berkeley.edu/ Department of Electrical Engineering And Computer Science]
+[https://lids.mit.edu/ Postdoctoral Associal at LIDS]
 
-[http://berkeley.edu/index.html University of California Berkeley]
+[http://mit.edu/ MIT]
 
 Thesis advisor: [http://www.stat.berkeley.edu/~bartlett/ Peter Bartlett]
 ~~~
 
 == About me
-I am a PhD candidate at UC Berkeley under the direction of [http://www.stat.berkeley.edu/~bartlett/ Peter Bartlett]. Previously, I was at Stanford studying Math and Electrical Engineering.
+I have recently moved to MIT for a postdoc under 
+[http://www-stat.wharton.upenn.edu/~rakhlin/ Sasha Rakhlin]. Previously, I was
+at UC Berkeley with [http://www.stat.berkeley.edu/~bartlett/ Peter Bartlett].
 
 == Contact
-[mailto:malek@eecs.berkeley.edu malek@eecs.berkeley.edu]
+[mailto:amalek@mit.edu amalek@mit.edu]
 
 = Publications
+
+Alan Malek, Yinlam Chow, Mohammad Ghavamzadeh, Sumeet Katariya. *Sequential Multiple Hypothesis Testing with Type I Error Control*, In Proceedings of AISTATS 2017.
+
+Yasin Abbasi-Yadkori, Alan Malek, Peter Bartlett, Victor Gabillon. *Hit-and-Run for Sampling and Planning in Non-Convex Spaces*, In Proceedings of AISTATS 2017.
+
 
 Wojciech Kotłowski, Wouter M. Koolen, Alan Malek. *Online Isotonic Regression*,
 In /Proceedings of The 29th Conference on Learning Theory/, June 2016. $[$[papers/COLT_2016_isotonic.pdf pdf]$]$
