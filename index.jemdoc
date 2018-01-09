@@ -19,12 +19,20 @@ at UC Berkeley with [http://www.stat.berkeley.edu/~bartlett/ Peter Bartlett].
 == Contact
 [mailto:amalek@mit.edu amalek@mit.edu]
 
+= Thesis
+
+Alan Malek. *Efficient Sequential Decision Making*, \Diss. University of California, Berkeley\, 2017.
+$[$[papers/thesis.pdf pdf]$]
+
 = Publications
 
-Alan Malek, Yinlam Chow, Mohammad Ghavamzadeh, Sumeet Katariya. *Sequential Multiple Hypothesis Testing with Type I Error Control*, to appear in Proceedings of AISTATS 2017.
+Wojciech Kotłowski, Wouter M. Koolen, Alan Malek. *Random Permutation Online Isotonic Regression*, In /Advances in Neural Information Processing Systems(NIPS) 30/, December 2017. $[$[papers/NIPS_2017_isotonic.pdf pdf]$]$ $[$[papers/NIPS_2017_isotonic_poster.pdf poster]$]$
 
-Yasin Abbasi-Yadkori, Alan Malek, Peter Bartlett, Victor Gabillon. *Hit-and-Run for Sampling and Planning in Non-Convex Spaces*, to appear in Proceedings of AISTATS 2017.
+Alan Malek, Yinlam Chow, Mohammad Ghavamzadeh, Sumeet Katariya. *Sequential Multiple Hypothesis Testing with Type I Error Control*, In /Proceedings of AISTATS/, April 2017.
+$[$[papers/AISTATS_2017_MHT.pdf pdf]$]$ $[$[papers/AISTATS_2017_MHT_poster.pdf poster]$]$
 
+Yasin Abbasi-Yadkori, Alan Malek, Peter Bartlett, Victor Gabillon. *Hit-and-Run for Sampling and Planning in Non-Convex Spaces*, In /Proceedings of AISTATS/, April 2017.
+$[$[papers/AISTATS_2017_HNR.pdf pdf]$]$
 
 Wojciech Kotłowski, Wouter M. Koolen, Alan Malek. *Online Isotonic Regression*,
 In /Proceedings of The 29th Conference on Learning Theory/, June 2016. $[$[papers/COLT_2016_isotonic.pdf pdf]$]$
