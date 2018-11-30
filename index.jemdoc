@@ -11,10 +11,11 @@ Alan Malek
 ~~~
 
 == About me
-I have recently moved to MIT for a postdoc under 
+I am a visiting scholar at the [https://simons.berkeley.edu/] Simons Institute.
+Previously, I was a post-doc with
 [http://www-stat.wharton.upenn.edu/~rakhlin/ Sasha Rakhlin] and
-[http://web.mit.edu/~jadbabai/www/ Ali Jadbabaie]. Previously, I was
-at UC Berkeley with [http://www.stat.berkeley.edu/~bartlett/ Peter Bartlett].
+[http://web.mit.edu/~jadbabai/www/ Ali Jadbabaie] at MIT and completed my PhD under
+[http://www.stat.berkeley.edu/~bartlett/ Peter Bartlett] at UC Berkeley.
 
 == Contact
 [mailto:amalek@mit.edu amalek@mit.edu]
@@ -25,6 +26,12 @@ Alan Malek. *Efficient Sequential Decision Making*, \Diss. University of Califor
 $[$[papers/thesis.pdf pdf]$]$
 
 = Publications
+
+Alan Malek, Peter L. Bartlett. *Horizon-Independent Minimax Linear Regression*, In /Advances in Neural Information Processing Systems 31/, December 2018. $[$[papers/NIPS_2018_horizonfree.pdf pdf]$]$ $[$[papers/NIPS_2018_poster.pdf poster]$]$
+
+
+Yasin Abbasi-Yadkori, Peter L. Bartlett, Victor Gabillon, Alan Malek, Michal Valko. *Best of Both Worlds: Stochastic and Adversarial Best-arm Identification*,
+In /Proceedings of The 31th Conference on Learning Theory/, July 2018. $[$[papers/COLT_2018_BOB.pdf pdf]$]$ $[$[papers/COLT_2018_BOB_poster.pdf poster]$]$
 
 Wojciech Kotłowski, Wouter M. Koolen, Alan Malek. *Random Permutation Online Isotonic Regression*, In /Advances in Neural Information Processing Systems(NIPS) 30/, December 2017. $[$[papers/NIPS_2017_isotonic.pdf pdf]$]$ $[$[papers/NIPS_2017_isotonic_poster.pdf poster]$]$
 
@@ -49,6 +56,8 @@ Wouter M. Koolen, Alan Malek, Peter L. Bartlett. *Efficient Minimax Strategies f
 Alan Malek, Yasin Abbasi-Yadkori, Peter Bartlett. *Linear Programming for Large-Scale Markov Decision Problems*. In /International Conference on Machine Learning (ICML)/, July 2014. $[$[papers/MDP-LP-ICML.pdf pdf]$]$ $[$[papers/MDP-LP-ICML-slides.pdf slides]$]$
 
 ==   Preprints
+
+Jason Altschuler, Victor-Emmanual Brunel, Alan Malek. *Best Arm Identification for Contaminated Bandits*, 	arXiv:1802.09514 \[math.ST\], 2018 $[$[papers/contaminated_bandits.pdf pdf.]$]$
 
 Y. Abbasi-Yadkori, P. Bartlett, and A. Malek, *Linear Programming for Large-Scale Markov Decision Problems*, arXiv:1402.6763 \[math.OC\], 2014 $[$[papers/MDP-LP-arxiv.pdf pdf.]$]$
 
