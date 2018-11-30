@@ -1,0 +1,2249 @@
+\documentclass{article}
+
+% if you need to pass options to natbib, use, e.g.:
+% \PassOptionsToPackage{numbers, compress}{natbib}
+% before loading nips_2018
+
+% ready for submission
+\usepackage[final]{nips_2018} 
+% to compile a preprint version, e.g., for submission to arXiv, add
+% add the [preprint] option:
+% \usepackage[preprint]{nips_2018}
+
+% to compile a camera-ready version, add the [final] option, e.g.:
+% \usepackage[final]{nips_2018}
+
+% to avoid loading the natbib package, add option nonatbib:
+% \usepackage[nonatbib]{nips_2018}
+
+\usepackage[utf8]{inputenc} % allow utf-8 input
+\usepackage[T1]{fontenc}    % use 8-bit T1 fonts
+\usepackage{hyperref}       % hyperlinks
+\usepackage{url}            % simple URL typesetting
+\usepackage{booktabs}       % professional-quality tables
+\usepackage{amsfonts}       % blackboard math symbols
+\usepackage{nicefrac}       % compact symbols for 1/2, etc.
+\usepackage{microtype}      % microtypography
+\usepackage{wrapfig}
+
+
+\usepackage{fullpage}
+\usepackage{microtype}
+\usepackage{graphicx}
+\usepackage{subfigure}
+\usepackage{booktabs} % for professional tables
+\usepackage{bm}
+\usepackage{amsfonts,dsfont}
+\usepackage{comment}
+\usepackage{mathtools,amsthm}
+
+\bibliographystyle{plainnat}
+
+\usepackage{xcolor}
+\usepackage{tikz}
+%\usepackage[colorinlistoftodos, textwidth=26mm, shadow,color=blue!30!white]{todonotes}
+\usepackage[disable]{todonotes}
+
+\usepackage{algorithmic, algorithm}
+\usepackage{hyperref}
+
+\newcommand{\KL}{\mathrm{KL}}
+\newcommand{\exop}{\mathop{\ex}}
+\newcommand{\proj}{\mathrm{proj}}
+\newcommand{\Regret}{\mathcal{R}}
+\newcommand{\spn}{\mathrm{span}}
+\newcommand{\rel}{\mathbf{Rel}}
+\newcommand{\df}{:=}
+\newcommand{\Reals}{{\mathbb R}}
+\newcommand{\markdef}[1]{\emph{#1}}
+\newcommand{\abs}[1]{\left\vert{#1}\right\vert}
+\newcommand{\norm}[1]{\left\Vert{#1}\right\Vert}
+\DeclareMathOperator*{\argmax}{argmax}
+\DeclareMathOperator*{\argmin}{argmin}
+
+\newenvironment{nonumberlemma}[1]%
+{%
+ \par\noindent{\bfseries\upshape Lemma\ #1 \,}%
+}%
+{}
+
+\newenvironment{nonumbertheorem}[1]%
+{%
+ \par\noindent{\bfseries\upshape Theorem\ #1 \,}%
+}%
+{}
+
+
+\newtheorem{assumption}{Assumption}
+\newtheorem{definition}{Definition}
+\newtheorem{lemma}{Lemma}
+\newtheorem{remark}{Remark}
+\newtheorem{corollary}{Corollary}
+\newtheorem{theorem}{Theorem}
+
+
+\input{def.tex}
+
+\title{Horizon-Independent Minimax Linear Regression}
+
+% The \author macro works with any number of authors. There are two
+% commands used to separate the names and addresses of multiple
+% authors: \And and \AND.
+%
+% Using \And between authors leaves it to LaTeX to determine where to
+% break the lines. Using \AND forces a line break at that point. So,
+% if LaTeX puts 3 of 4 authors names on the first line, and the last
+% on the second line, try using \AND instead of \And before the third
+% author name.
+\author{ 
+        Alan Malek\\
+        Laboratory for Information and Decision Systems\\
+        Massachusetts Institute of Technology\\
+        77 Massachusetts Avenue\\
+        Cambridge, MA 02139-4307, USA
+        \texttt{amalek@mit.edu}\\
+        \AND
+        Peter L. Bartlett\\
+        Department of EECS and Statistics\\
+        University of California\\
+        Berkeley, CA 94720-1776, USA\\
+        \texttt{bartlett@cs.berkeley.edu}\\
+      }
+
+
+
+
+\begin{document}
+% \nipsfinalcopy is no longer used
+
+\maketitle
+
+\begin{abstract}
+  We consider online linear regression: at each round, an adversary
+  reveals a covariate vector, the learner predicts a real value, the
+  adversary reveals a label, and the learner suffers the squared
+  prediction error. The aim is to minimize the difference between the
+  cumulative loss and that of the linear predictor that is best in
+  hindsight. Previous work demonstrated that the minimax optimal
+  strategy is easy to compute recursively from the end of the game;
+  this requires the entire sequence of covariate vectors in
+  advance. We show that, once provided with a measure of the scale of
+  the problem, we can invert the recursion and play the minimax
+  strategy without knowing the future covariates. Further, we show
+  that this forward recursion remains optimal even against adaptively
+  chosen labels and covariates, provided that the adversary adheres to
+  a set of constraints that prevent misrepresentation of the scale of
+  the problem.  This strategy is horizon-independent in that the
+  regret and minimax strategies depend on the size of the constraint
+  set and not on the time-horizon, and hence it incurs no more regret
+  than the optimal strategy that knows in advance the number of rounds
+  of the game.  We also provide an interpretation of the minimax
+  algorithm as a follow-the-regularized-leader strategy with a
+  data-dependent regularizer and obtain an explicit expression for
+  the minimax regret.
+\end{abstract}
+
+
+\section{Introduction}
+Linear regression is a fundamental prediction problem in
+machine learning and statistics. In this paper, we study a sequential
+version: on round $t$, the adversary chooses and reveals a covariate
+vector $\x_t\in\Reals^d$, the learner makes a real-valued prediction $\hat y_t$, the adversary chooses and reveals the true outcome $y_t\in\Reals$, and finally the learner is penalized by the square loss, $(\hat y_t - y_t)^2$.
+
+% Figure~\ref{fig:protocol} gives a formal definition.
+% \begin{wrapfigure}[12]{r}{0.5\textwidth}
+% \label{fig:protocol}
+% \centering
+% \fbox{\begin{minipage}{.45\textwidth}
+% Given: Covariate budget matrix $\SSigma\succeq 0$\\
+% For $t=1,2, \ldots$
+% \begin{itemize}\setlength{\itemindent}{-.25cm}
+% \setlength{\itemsep}{.1em}
+% \item Adversary reveals $x_t$
+% \item Learner predicts $\hat y_t \in \Reals$
+% \item Adversary reveals $y_t \in \Reals$
+% \item Learner incurs loss $\left(\hat y_t - y_t\right)^2$.
+% \end{itemize}
+% Learner's aim is to minimize regret,
+% \[
+%   \Regret\df \sum_t \left(\hat y_t - y_t\right)^2
+%   -
+%   \min_\theta  \sum_t \left(\x_t^\top\theta - y_t\right)^2
+%   \]
+% \end{minipage}}
+%   \caption{online linear regression protocol}
+% \end{wrapfigure}
+Since it is hopeless to guarantee a small loss (the adversary can always cause constant loss per round), we instead aim to guarantee that we are able to predict almost as well as the best fixed linear predictor in hindsight. Letting $\x_s^t$  and $y_s^t$ denote
+$\x_s,\ldots,\x_t$ and $y_s,\ldots,y_t$, respectively, define the regret of a strategy that predicts $\hat y_1^T$ as
+\begin{align*}
+\Regret_T\left(\hat y_1^T,\x_1^T,y_1^T\right)  &~\df~
+\sum_{t=1}^T (\hat y_t-y_t)^2
+- \min_{\theta \in \Reals^d} \sum_{t=1}^T (\theta^\top \x_t - y_t)^2.
+\end{align*} 
+A strategy 
+  $
+    s:\bigcup_{t\ge 1} (\Reals^d\times\Reals)^{t-1}\times\Reals^d\to\Reals,
+    $
+    is a map from observations to predictions, 
+and we define $\Regret_T\left(s,\x_1^T,y_1^T\right):=
+\Regret_T\left(\hat y_1^T,\x_1^T,y_1^T\right)$ where
+$\hat y_t=s(\x_1,y_1,\ldots,\x_{t-1},y_{t-1},\x_t)$.
+Our goal is to find a strategy that guarantees low regret for all data sequences. In
+particular, this paper is concerned with the minimax strategy $s^*$, which
+is the strategy that minimizes the worst case regret over all possible covariate and outcome
+sequences in some constraint set, i.e.\ $s^*$ satisfies
+\[%\begin{equation}\label{eq:min.max.problem}
+\max_{\x_1^T, y_1^T} \Regret_T\left(s^*,\x_1^T, y_1^T\right)
+=
+\min_s
+\max_{\x_1^T, y_1^T} \Regret_T\left(s,\x_1^T, y_1^T\right).
+\]%\end{equation}
+
+
+In general, computing minimax strategies is computationally
+intractable because the optimal prediction $\hat y_t$ depends on the
+complete history $(\x_1,y_1,\ldots,\x_{t-1},y_{t-1},\x_t)$, and
+the dependence might be a rather arbitrary function of this enormous
+space of histories. So it is surprising that, in the case of
+fixed-design linear regression (where the strategy knows the
+covariate sequence in advance), the minimax strategy can be
+efficiently computed~\citep{minimax.regression}.
+
+This paper builds on results from \cite{minimax.regression}, which studied fixed-design online linear regression, where the game length $T$ and covariates
+$\x_1^T\df \x_1,\ldots,\x_T$ are known to the learner a priori. Under
+constraints on the adversarial labels $y_1^T$, the value function and
+minimax strategy were calculable in closed form using backwards
+induction. The resulting minimax strategy 
+\begin{equation}
+  \tag{{\sc mms}}
+  \label{eq:strategy}
+  \hat y_{t+1} ~=~ \x_{t+1}^\top\P_{t+1}  
+  \sum_{s=1}^t y_s\x_s,  
+\end{equation}
+is a simple, linear predictor with coefficient matrices defined by
+\begin{equation}
+  \label{eq:def.P}
+  \P_T  = \bigg(\sum_{t=1}^T \x_t\x_t^\top\bigg)^\dagger \text{ and recursion }
+  \P_t  = \P_{t+1} + \P_{t+1} \x_{t+1}\x_{t+1}^\top\P_{t+1}.
+\end{equation}
+The $\hat y_t$ is a function of the whole sequence $\x_1^T$, and thus an extension to online-design seems difficult.
+
+\begin{wrapfigure}[15]{r}{0.48\textwidth}
+\centering
+\vspace{-2em}
+\fbox{\begin{minipage}{.47\textwidth}
+    Given: covariate constraints $\mathcal X$ and label constraints $\mathcal Y(\{x_t\})$\\
+    %$\SSigma_0\succeq 0$, $\gamma_0>0$, $\mathcal X(\SSigma_0,\gamma_0)$\\
+    For $t=1,2,\ldots,$
+\begin{itemize}\setlength{\itemindent}{-.25cm}
+  \setlength{\itemsep}{.1em}  
+\item Adversary chooses $\x_t$ s.t. $\x_1^t \in\mathcal X$
+\item Learner predicts $\hat y_t$
+\item Adversary may end the game
+\item Adversary reveals $y_t$ s.t. $y_1^t\in\mathcal Y(\x_1^T)$
+\item Learner incurs loss $\left(\hat y_t - y_t\right)^2$
+\item The game ends if no $\x_{t+1}$ exists such that $\x_1^{t+1} \in \mathcal{X}$
+\end{itemize}
+\end{minipage}}
+\caption{Adversarial Covariates Protocol}
+\label{fig:protocol}
+\end{wrapfigure}
+
+\paragraph{Our contributions}
+This paper extends the fixed design setting to adversarial design where neither the covariates nor the length of the game are fixed a priori. We use $\{\x_t\}$ and $\{y_t\}$ to denote arbitrary length sequences of covariates and labels, respectively. We allow the adversary to play any covariate sequence in some constraint set $\mathcal X$ and labels in some set $\mathcal Y(\{\x_t\})$ (which may depend on the covariates).
+
+In particular, we identify a family $\mathcal X, \mathcal Y$ parameterized by a positive-definite matrix $\SSigma$, representing the size of future covariates, and a scalar $\gamma_0$, representing the size of the future labels, and present a strategy that is minimax optimal against all adversarial sequences in this family. The algorithm needs only know $\SSigma$, and the guarantee is horizon-independent in the sense that the family does not constrain the length of the covariate sequence and includes covariate sequences of arbitrary length for any $\SSigma$, $\gamma_0$ pair.
+
+The protocol of the general, horizon-independent setting is outlined in Figure~\ref{fig:protocol}. We derive the minimax strategy and show that it is optimal in the following way.
+\begin{definition}
+A strategy $s^*$ is horizon-independent minimax optimal
+for some class $\mathcal X$ of covariate sequences and some
+class $\mathcal Y(\{\x_t\})$ of label sequences, possibly depending
+on $\{\x_t\}\in\mathcal X$, if
+  \[%\begin{equation}\label{eq:def.himo}
+    \sup_{T}\left( 
+    \sup_{\x_1^T\in\mathcal X,\, y_1^T\in\mathcal Y(\x_1^T)}
+    \Regret_T\left(s^*,\x_1^T,y_1^T\right) - \min_s
+    \sup_{\x_1^T\in\mathcal X,\, y_1^T\in\mathcal Y(\x_1^T)}
+    \Regret_T\left(s,\x_1^T,y_1^T\right)\right)=0.
+  \]%\end{equation}
+\end{definition}
+We require $s^*$ to have regret no larger than {\em even a strategy that knows $T$}.
+
+In other words, we establish a more natural measure of game length
+than the number of rounds. The covariate constraints on $\{\x_t\}$
+ ensure that the adversary respects the scale constraint
+$\SSigma$ so that the learner is not led to under-regularize or
+over-regularize. The minimax strategy is efficient and is simultaneously minimax optimal against all covariate sequences corresponding to $\SSigma$.
+
+We motivate our constraint set by showing that every condition is necessary, and we also cast the minimax strategy as follow the regularized leader strategy with a data-dependent regularizer. Finally, we provide a general regret upper bound.
+
+% We find the existance of an efficient horizon-independent minimax strategy
+% surprising as even fixed-horizon minimax strategies are usually not
+% efficient. For instance, in the well-understood log loss
+% game~\citep{Grunwald-mdl-2007}, the minimax strategy (normalized
+% maximum likelihood) is only horizon-independent for a very restricted set of
+% probability models \citep{SNML2013}.
+
+
+\paragraph{Outline}
+We begin with a review of how backwards induction is used to derive the fixed-design minimax algorithm \eqref{eq:strategy} in Section~\ref{sec:fixed.design}. By inverting the recursion, we show in Section~\ref{sec:forward.algorithm} how to calculate \eqref{eq:strategy} given only $\P_0$, and thus we have the minimax strategy for any covariate sequence that perfectly agrees with the given $\P_0$.
+
+Section~\ref{sec:ABC.condition} greatly expands the scope of our algorithm by deriving weaker conditions on the adversary and proves that, under these conditions, the same minimax strategy is horizon-independent minimax optimal. We argue that these conditions are necessary. We then interpret the minimax strategy as a follow the regularized leader with a specific, data-dependent regularizer in Section~\ref{sec:FTRL}.
+
+
+\paragraph{Related Work}
+While linear regression has a long history in statistics and
+optimization, its online sibling is much more recent, starting with
+the work of \cite{foster1991}, which considered binary labels and
+$\ell_1$-constrained parameters $\theta$. He proved an $O(d\log (d T))$
+regret bound for an $\ell_2$-regularized follow-the-leader strategy.
+\cite{bianchilongwarmuth96} considered $\ell_2$-constrained parameters
+and gave $O(\sqrt T)$ regret bounds for a gradient descent algorithm
+with $\ell_2$ regularization. \cite{kivinen1997exponentiated}
+showed that an Exponentiated Gradient algorithm with relative
+entropy gives the same regret without the need for a constraint on the
+parameters.  \cite{vovk1998competitive} applied the Aggregating
+Algorithm \citep{vovk1990aggregating} to continuously many experts and
+arrived at a scale free algorithm by using the inverse second moment
+matrix of past and current covariates.
+\cite{forster1999relative} and~\cite{azoury2001relative} showed
+that this algorithm is last step minimax and achieves an $O(\log T)$
+scale-dependent regret bound. (See also the work of
+\cite{moroshko2014weighted} on last-step minimax.)
+
+\cite{MinMaxGaussDens} obtained the minimax strategy for prediction in
+Euclidean space with squared loss. This was extended to more general
+losses in \citep{koolen2014efficient} and to tracking problems
+in \citep{time.series}. Finally, \cite{minimax.regression} obtained
+the minimax strategy for fixed-design linear regression.
+We present this strategy in the next section, because we build on
+these results. In these papers, the minimax analysis provides
+a natural, data-dependent regularization, in contrast to the
+follow-the-leader methods described above. We make this comparison
+explicit in Section~\ref{sec:FTRL}, by calculating the implied
+regularization.
+
+\section{Fixed Design Linear Regression}
+\label{sec:fixed.design}
+We begin by summarizing the main results of \cite{minimax.regression}.
+Recall that in the fixed design setting, the game length $T$ and
+covariates $\x_1^T$ are fixed and known to both players. Define the
+summary statistics $\s_t \df\sum_{s=1}^t y_s\x_s$, $\sigma_t^2 =
+\sum_{s=1}^t y_t^2$, and $\Pi_t = \sum_{s=1}^t \x_s\x_s^\top$. The
+minimax strategy can be computed by solving the offline problem
+$
+  \min_\theta \sum_{t=1}^T (\x_t^\top\theta - y_t)^2 = \sum_{t=1}^T y_t^2 - \s_T^\top\Pi_T^\dagger\s_T,
+ $
+where $\M^\dagger$ is the pseudo-inverse of matrix $\M$. The optimal actions $\hat y_t$ and $y_t$ are computed as a function of the state $\s_{t-1}$ and covariates $\x_1^T$ by solving the backward induction
+\begin{align*}     
+      V\left(\s_t,\sigma_t^2,t,\x_1^T\right)
+        &\df \min_{\hat y_{t+1}}\max_{y_{t+1}} \left(
+            \left(\hat y_{t+1} - y_{t+1}\right)^2
+            + V\left(\s_t+y_{t+1}\x_{t+1},
+                \sigma_t^2+y_{t+1}^2,t+1, \x_1^T\right)\right)
+\end{align*}
+with base case
+$
+ V\left(\s_T,\sigma_T^2,T, \x_1^T\right)
+ \df
+ -\min_{\theta\in\Reals^d} \sum_{t=1}^T\left(\theta^\top\x_t-y_t\right)^2
+ $.
+The arguments of $V$ include $\x_1^T$ to emphasize the fixed-design setting. Performing the backwards induction generates plays $\hat y_1^T$ and $y_1^T$ that witness the value of the game,
+\[
+  \min_{\hat y_1}\max_{y_1} \cdots
+  \min_{\hat y_T}\max_{y_T}
+  \;
+  \sum_{t=1}^T(\hat y_t-y_t)^2 -
+  \min_{\w\in\Reals^d} \sum_{t=1}^T(\w^\top\x_t-y_t)^2,
+\]
+which is the minimum guaranteeable regret against all data sequences. The resulting minimax strategy is precisely the linear predictor $\hat y_{t+1} = \x_{t+1}^\top\P_{t+1}\s_t,$ (\eqref{eq:strategy}) 
+with coefficient matrices defined by the recursion \eqref{eq:def.P}. Note that $\P_t$ is a function of every covariate $\x_1^T$.
+The minimax strategy is similar to follow-the-leader, which would predicts with $\Pi_t^\dagger$ in place of $\P_t$; however, $\P_t$ is a shrunken version of $\Pi_t^\dagger$ that takes future covariances into account.
+
+\iffalse
+\paragraph{Presentation question}
+It is possible to restructure the entire paper to apply joint constraints on $\x_1^T, y_1^T$ to the adversary instead of constraining $\x_1^T$ and the $y_1^T$ separately. The ellipsoidal constraints are an example of a joint family. The continuation constraints are particularly annoying to state as a bound on $\x_1^T$ only, since the are naturally
+  \[
+  \mathcal C(\x_1^{t-1}, \s_{t-1})
+  \df
+    \left\{
+    \x_t: \gamma_{t-1}
+    \geq\s_{t-1}^\top\left(\Pi_{t-1}^\dagger- \P_{t-1} \right)\s_{t-1}
+    \right\}
+    \]
+    For the joint version and
+    \[     
+      \mathcal C(\SSigma, \gamma_0)
+  \df
+  \left \{
+  \x_1^T:
+  \gamma_{t-1}\geq
+  \left\lVert \left(\B_{t-1}\X_{t-1}^\top \left(\Pi_{t-1}^\dagger- \P_{t-1} \right)\X_{t-1}\B_{t-1}\right)^{\frac12}
+\right\rVert
+    \forall t=1,\ldots,T \right\}
+\]
+for the $\x_t$ only version (i.e.\ one that needs to hold for all $y_t$). Which should we choose?
+{\bf noitseuq}
+\fi
+
+The main result of \cite{minimax.regression} is the minimax optimality of  \eqref{eq:strategy} for the following classes. For some fixed sequence of positive label budgets $B_1,\ldots,B_T>0$, define 
+\begin{enumerate}
+  \setlength{\itemsep}{1pt}
+  \setlength{\parskip}{0pt}
+  \setlength{\parsep}{0pt}
+\item \emph{Label constraints on $y_t$}: 
+$ \mathcal L(B_1^T) := \{y_1^T:|y_t|\leq B_t\forall \t=1,\ldots,T\}$
+\item \emph{Box constraints on $\x_t$}:
+    $\label{eqn:compatible}
+  \mathcal B(B_1^T) := \left\{ \x_1^T:
+  B_t\ge \sum_{s=1}^{t-1} \left|\x_t^\top\P_t\x_s\right|B_s
+\text{ for $2\le t$}\right\}.
+$
+% \item \emph{Implicit box constraints}:
+%       $\mathcal B(\x_1^T, b) := \mathcal B\left(B_1^T(\x_1^T,b)\right)$,
+%     where $B_1^T(\x_1^T,b)$ is the component-wise minimum of the set of
+%     compatible box constraints, $\mathcal C(\x_1^t, b))$,
+%     defined by
+% \begin{equation}\label{eqn:compatible}
+%   \mathcal C(\x_1^T, b) := \left\{ B_1^T: B_1=b,\,
+%   B_t\ge \sum_{s=1}^{t-1} \left|\x_t^\top\P_t\x_s\right|B_s
+% \text{ for $2\le t\le T$}\right\}.
+%   \end{equation}
+\item \emph{Ellipsoidal constraints}:
+$
+    \mathcal E(\x_1^T,R)
+    :=
+      \left\{y_1^T:\sum_{t=1}^T y_t^2\x_t^\top\P_t\x_t\leq R\right\}.
+$
+\end{enumerate}
+\begin{theorem}\citep[Theorems 2 and 10]{minimax.regression}
+\label{thm:fixed.design.regret}
+For each $x_1^T$, the corresponding strategy
+\eqref{eq:strategy} is minimax optimal with respect to $\mathcal
+B(B_1^T)$ if $y_1^T\in\mathcal L(B_1^T)$ and with respect to $\mathcal E(\x_1^T,R)$,
+for any $B_t>0$ sequence and any $R>0$, in the following sense:
+  \begin{align*}
+    (1) &\lefteqn{\text{
+          If $\x_1^T\in\mathcal B(B_1^T)$, then
+     }}&& \\[-3mm]
+     && \sup_{y_1^T\in\mathcal L(B_1^T)}R_T( \eqref{eq:strategy},\x_1^T,y_1^T) &=
+      \min_{s}\sup_{y_1^T\in\mathcal
+      L(B_1^T)}R_T(s,\x_1^T,y_1^T)=\sum_{t=1}^T
+      B_t^2\x_t^\top\P_t\x_t,\\
+      % (2) && \sup_{y_1^T\in\mathcal B(\x_1^T,b)}R_T(s^*,\x_1^T,y_1^T) &=
+      % \min_{s}\sup_{y_1^T\in\mathcal
+      % B(\x_1^T,b)}R_T(s,\x_1^T,y_1^T)
+      % =\sum_{t=1}^T B_t^2(\x_1^T)\x_t^\top\P_t\x_t,\\
+      (2) && \sup_{y_1^T\in\mathcal E(\x_1^T,R)}R_T(\eqref{eq:strategy} ,\x_1^T,y_1^T) &=
+      \min_{s}\sup_{y_1^T\in\mathcal E(\x_1^T,R)}R_T(s,\x_1^T,y_1^T)=R.
+  \end{align*}
+\end{theorem}
+
+\section{The Forward Algorithm}
+\label{sec:forward.algorithm}
+The previous section described the fixed-design minimax strategy and
+established sufficient conditions for its optimality. Unfortunately,
+$\P_t$ is recursively defined as a function of the entire $\x_1^T$
+sequence. In this section, we show that it is possible to remove the fixed-design and known-game-length
+requirement if we limit the adversary to play sequences that follow
+the \markdef{Adversarial Covariate conditions}. Letting $\mathcal X^\infty = \bigcup_{T>0} \left(\Reals^d\right)^T$ denote the set of covariate sequences of finite length, define
+\begin{align}
+    \mathcal A(\SSigma)
+    &\df
+      \left\{
+      \x_1^T \in \mathcal X^\infty
+      :\text{for $\P_0,\ldots,\P_T$ defined by~\eqref{eq:def.P}, }
+      \P_0^\dagger \preceq \SSigma  \right\}, \text{ and }\notag \\
+\overline{\mathcal A}(\SSigma)
+    &\df
+      \left\{
+      \x_1^T \in \mathcal X^\infty
+      :\text{for $\P_0,\ldots,\P_T$ defined by~\eqref{eq:def.P}, }
+      \P_0^\dagger = \SSigma  \right\};
+\end{align}
+that is, $\x_1^T \in \mathcal A(\SSigma)$ if the $\P_t$ computed by applying \eqref{eq:def.P} to the sequence $\x_1^T$ results in $\P_0^\dagger \preceq \SSigma$.
+
+The key insight of this section is that it is possible to invert the
+$\P_t$ recursion: we can compute $\P_t$ from $\P_{t-1}$ and $\x_t$.  Hence, if we are given $\P_0$, then we can compute every $\P_t$ online. For some initial condition $\SSigma$, 
+define the \markdef{forward recursion} with base case $\P_0 = \SSigma^\dagger$ and induction step
+\begin{equation}
+  \label{eq:forward.recursion}
+    \P_{t} := \P_{t-1} - \displaystyle\frac{a_{t}}{b_t^2}
+            \P_{t-1}\x_{t}\x_{t}^\top \P_{t-1},
+\text{ where }
+ b_t^2  := \x_{t}^\top\P_{t-1}\x_{t}, \;\; a_t :=
+  \displaystyle\frac{\sqrt{4b_t^2+1}-1}{\sqrt{4b_t^2+1}+1}.
+\end{equation}
+The prediction matrix $\P_t$ is a function of $\SSigma$ and $\x_1^t$ only. For the rest of the paper, we will define \eqref{eq:strategy} with respect to the forward recursion, i.e.\ $\hat y_{t} := \x_t^\top\P_t\s_{t-1}$, where $\P_t$ is defined by recursion \eqref{eq:forward.recursion}. The calculation of $\hat y_t$ only requires knowledge of $\Sigma$, $\x_1^t$, and $y_1^{t-1}$, all of which are available to the learner when choosing $\hat y_t$. The algorithm needs $O(d^2)$ memory and at each round the computational complexity is $O(d^2)$. It is essential that the two recursions are equivalent, which is guaranteed by the following lemma.
+\begin{lemma}
+\label{lemma:AisP} Let $\SSigma\succeq 0$ be a positive semidefinite matrix. 
+For any covariate sequence $\x_1^T\in\overline{\mathcal A}(\SSigma)$, the $\P_t$ matrices defined by the backwards recursion \eqref{eq:def.P} applied to $\x_1^T$ are identical to the $\P_t$ matrices defined by the forward recursion \eqref{eq:forward.recursion} with base case $\P_0 = \SSigma^\dagger$ and updates given by $\x_1^T$.
+
+% $\x_1^T$ satisfying $ \SSigma = \sum_{t=1}^T
+% \frac{\x_t^\top\P_t\x_t}{1+ \x_t^\top\P_t\x_t}\x_t \x_t^\top $, where
+% the matrices $\P_t$ are defined by , the forward matrices defined by
+% are identical to the matrices $\P_t$ defined by the backwards
+% recursion \eqref{eq:def.P}.
+
+
+% the forward matrices $\P_t$ defined by 
+% are identical to the $\P_t$ matrices defined by the backwards recursion \eqref{eq:def.P}.
+\end{lemma}
+\begin{proof}
+  Let $\P_t'$ be defined by the forwards recursion starting from $\P_0= \SSigma^\dagger$ and let $\P_t$ be defined by the backwards recursion \eqref{eq:def.P}. Our goal is to show that $\P_t = \P_t'$ for all $t$.  The base case $\P_0=\P_0'$ is a simple consequence \cite[Lemma 11]{minimax.regression}, which uses repeated applications on Sherman-Morrison to show that
+  \begin{equation}
+    \label{eq:nicePtdef}
+    \P_t^\dagger = \Pi_t+
+        \sum_{s=t+1}^T \frac{\x_s^\top\P_s\x_s}{1+ \x_s^\top\P_s\x_s}
+        \x_s \x_s^\top.
+      \end{equation}
+      Now, assuming the induction hypothesis  $\P_{t-1}' = \P_{t-1}$, we can evaluate
+\begin{align}
+  \P_t' &= \P_{t-1} - \frac{a_t}{b_t^2} \P_{t-1}\x_t \x_t^\top \P_{t-1}\notag\\
+        &= \P_t + \P_t \x_t\x_t^\top \P_t
+          - \frac{a_t}{b_t^2}
+          \left(\P_t + \P_t \x_t\x_t^\top \P_t\right)
+          \x_t \x_t^\top \left(\P_t + \P_t \x_t\x_t^\top \P_t\right) \notag\\
+        &= \P_t
+          +\P_t\x_t\left(
+          1 - \frac{a_t}{b_t^2} \left(1 + 2\x_t^\top \P_t \x_t + \left(\x_t^\top \P_t \x_t\right)^2 \right)
+          \right) \x_t^\top \P_t \label{eq:Pt.induction.intermediate}
+\end{align}
+By definition, we have $b_t^2 = \x_t^\top \P_{t-1} \x_t = \x_t^\top \P_t \x_t + \left(\x_t^\top \P_t \x_t\right)^2$, which we can invert to find that $\x_t^\top \P_t \x_t = \frac{1}{2}\left(\sqrt{4 b_t^2 + 1} - 1\right)$. Plugging this is, the term in the parenthesis in \eqref{eq:Pt.induction.intermediate} is 
+\begin{align*}
+  1 - \frac{a_t}{b_t^2} \left(1 + 2\x_t^\top \P_t \x_t + \left(\x_t^\top \P_t \x_t\right)^2 \right)
+  &=
+    1 - \frac{a_t}{b_t^2} \left(1 + \left(\sqrt{4 b_t^2 + 1} - 1\right)
+    +
+    \frac{1}{4}\left(\sqrt{4 b_t^2 + 1} - 1\right)^2 \right)
+  \\
+  &=
+    1 - \frac{a_t}{b_t^2} \left(\frac{1}{2}\sqrt{4 b_t^2 + 1}
+    +
+    \frac{1}{2} 
+    + b_t^2 
+    \right)
+  \\
+  &=
+    \frac{2}{\sqrt{4 b_t^2 + 1} + 1}
+    - \frac{1}{2b_t^2}\left(\sqrt{4 b_t^2 + 1} - 1\right)\\
+  &=
+    \frac{4 b_t^2 - \left(\sqrt{4 b_t^2 + 1} - 1\right) \left(\sqrt{4 b_t^2 + 1} + 1\right)
+    }{2 b_t^2 \left(\sqrt{4 b_t^2 + 1} + 1\right)} = 0,
+\end{align*}
+implying that $\P_t' = \P_t$, as desired.
+\end{proof}
+
+  Our first result is that this algorithm is actually minimax optimal if we constrain the adversary to play in $\overline{\mathcal A}(\SSigma)$. Another interpretation is that $\SSigma$ encodes all the necessary scale information the learner needs to respond optimally. That is, \eqref{eq:strategy} performs as well as the best strategy that sees the covariate sequence in advance. In particular, knowledge of $\SSigma$, not $T$, is necessary for the learner.
+\begin{theorem}
+\label{thm:forward.minimax}
+  For all positive semidefinite $\SSigma$, label bounds $B_1,B_2,\ldots>0$, and constants $b>0$ and $R>0$,
+  the minimax strategy \eqref{eq:strategy} using the forward recursion \eqref{eq:forward.recursion} starting from $\P_0 = \SSigma^\dagger$ is horizon-independent minimax optimal, i.e.\
+\begin{equation*}
+  \sup_{T}\sup_{\x_1^T\in\mathcal X}
+  \left( \sup_{y_1^T\in\mathcal Y(\x_1^T)}
+            R_T(s^*,\x_1^T,y_1^T) 
+            -
+           \min_{s}    \sup_{y_1^T\in\mathcal Y(\x_1^T)}
+           R_T(s,\x_1^T,y_1^T)
+            \right)=0
+\end{equation*}
+ for $\left(\mathcal X,\mathcal Y(\x_1^T)\right)$ equal to either
+$(\overline{\mathcal A}(\SSigma), \mathcal E(\x_1^T, R))$ or 
+$ (\mathcal B(B_1^T)\cap \overline{\mathcal A}(\SSigma),
+\mathcal L(B_1^T))$.
+\end{theorem}
+
+\begin{proof}[Proof of Theorem~\ref{thm:forward.minimax}.]
+  Since $\x_1^T\in\overline{\mathcal A}(\SSigma)$, Lemma~\ref{lemma:AisP} implies that the $\P_t$ matrices from the forwards and backwards recursions are equivalent, and therefore \eqref{eq:strategy} corresponds to the minimax strategy for the fixed-design game with $\P_0^\dagger = \SSigma$. The can then apply Theorem~\ref{thm:fixed.design.regret}, part (1), which yields 
+\begin{align*}
+  \sup_{ y_1^T\in\mathcal B(B_1^T)}
+            R_T(s^*,\x_1^T,y_1^T) 
+            -
+           \min_{s}\sup_{y_1^T\in\mathcal B(B_1^T)}
+           R_T(s,\x_1^T,y_1^T)=0.
+\end{align*}
+Since this holds for all $\x_1^T$, we actually get the stronger result
+\begin{equation*}
+  \sup_{T}\sup_{\x_1^T\in\mathcal A(B_1^T)\cap\overline{\mathcal A}(\SSigma)}
+  \left(
+    \sup_{y_1^T\in\mathcal B(B_1^T)}
+            R_T(s^*,\x_1^T,y_1^T) 
+            -
+           \min_{s}    \sup_{y_1^T\in\mathcal B(B_1^T)}
+           R_T(s,\x_1^T,y_1^T)
+            \right)=0.
+\end{equation*}
+Identical reasoning extends part (2) of Theorem~\ref{thm:fixed.design.regret} to the adversarial covariate context.
+\end{proof}
+
+The adversarial covariate conditions are defined for entire $\x_1^T$ sequences, but there is an online characterization, derived from the following lemma. 
+\begin{lemma}
+  \label{lemma:P.consistency}
+  Consider any $t\geq 0$, $\x_1,\ldots, \x_t$, and symmetric matrix
+  $\P\succeq 0$. We have that $\P^\dagger \succeq \Pi_t$ if and only if,
+    for any $T\ge t+\mathrm{rank}\left(\P^\dagger - \Pi_t \right)$,
+    there is a continuation of the covariate sequence,
+    $\x_{t+1},\ldots,\x_T$, such that setting $\P_t=\P$ and defining
+    $\P_{t+1},\ldots,\P_T$ by the forward recursion \eqref{eq:forward.recursion} gives
+    $
+      \P_T^\dagger = \Pi_T
+    $.
+  \end{lemma}
+  A stronger version with proof is presented in the Appendix as
+Theorem~\ref{thm:future.xt} and explicitly derives conditions on
+$\x_{t+1}$ that ensure $\P^\dagger \succeq \Pi_t$.
+
+In words, a sequence of covariates $\x_1^t$ is the prefix of some $\x_1^T\in\mathcal A(\SSigma)$ if $\P_s^\dagger \succeq \Pi_s$ for all $s\leq t$, where $\P_s$ corresponds to the forward recursion~\eqref{eq:forward.recursion} defined by intuition condition $\P_0 = \SSigma^\dagger$ and covariates $\x_1^t$. Hence, it is equivalent to constrain the adversary to play $\x_t$ satisfying this condition at every round, and we do not require the adversary to fix the covariate sequence in advance; it is equivalent to define \todo{should this be a lemma?}
+\begin{align}
+  \mathcal A(\SSigma)
+  &=
+    \left\{
+    \x_1^T\in\mathcal X^\infty: \P_0^\dagger = \SSigma\text{ and }\P_t^\dagger \succeq
+    \Pi_t \,\, \forall t\geq 1\right\}, \text{ and }\\
+  \overline{\mathcal A}(\SSigma)
+  &=
+    \left\{
+    \x_1^T \in \mathcal X^\infty: \P_0^\dagger = \SSigma,\P_t^\dagger \succeq
+    \Pi_t \,\, \forall t\geq 1, \text{ and } \P_T^\dagger = \Pi_T\right\}.
+\end{align}
+
+
+\section{Expanding the Minimax Conditions}
+\label{sec:ABC.condition}
+The strategy \eqref{eq:strategy} is minimax optimal for any covariate
+sequence $\x_1^T\in\overline{\mathcal A}(\SSigma)$ if the adversary
+plays covariates that meet the $\SSigma$ constraint with equality,
+which is quite restrictive. In this section, we identify a much
+broader set of constraints on the adversary's actions where
+\eqref{eq:strategy} remains the best learner response.  These
+conditions allow for adversarial design; the data may be chosen in
+response to the learner's actions.
+
+A natural relaxation is to remove the equality constraints; this results in a set of constraints on the adversary where the labels $\{y_t\}$ are in
+$ \mathcal L(\{B_t\})
+  :=
+    \{y_t: \abs{y_t} \leq B_t\forall t\geq 1\}
+$,
+and the covariates $\{\x_t\}$ are in 
+$  \mathcal A\left(\SSigma\right) \cap  \mathcal B\left(\SSigma\right)$, 
+where 
+$  \mathcal B\left(\SSigma\right) =\left\{
+    \{\x_t\} : B_t \geq \sum_{s=1}^{t-1}\abs{\x_t^\top\P_t\x_s}\forall t\geq 1
+  \right\}$.
+  
+    The $\mathcal B(\SSigma)$ condition is necessary for an
+    efficient algorithm \citep{minimax.regression}, and without the $\mathcal A(\SSigma)$ condition, the adversary could choose $\x_t$ to be a scaled version of $\s_{t-1}$ and $y_t = \theta_{t-1}^* \x_t$, where $\theta_{t-1}^*$ is the best least squares predictor of $\x_t^{t-1}$ and $y_1^{t-1}$. The comparator will never suffer more regret, the algorithm will suffer some regret, and we can scale $x_t$ such that the $\mathcal B(\SSigma)$ conditions are satisfied. To summarize, without the $\mathcal A$ constraint, the adversary can cause arbitrary regret. However, the $\mathcal A$ and $\mathcal B$ constraints are not sufficient to guarantee a solvable game:
+\begin{lemma}\label{lemma:A.B.infinite.regret}
+  Fix any $\SSigma$ and any $\{B_t\}$ with $B_t\geq b>0$ for all $t$. Then, for any $M >0$, there exists $\x_1^T\in \mathcal {A}(\SSigma)\cap \mathcal {B}(\SSigma)$ and $y_1^T\in\mathcal L(B_1^T)$ such that the minimax regret is larger than $M$.
+\end{lemma}
+A covariate budget is not sufficient for a minimax algorithm; it is not even clear how to define minimax when the regrets are not bounded. Hence, we will introduce \markdef{continuation constraints} (the name will become clear soon). Let $\gamma_0>0$ be some initial label budget \todo{find a better name} and define $\gamma_t = \gamma_{t-1} - B_t^2\x_t^\top\P_t\x_t$, with $\P_t$ defined by the forward recursion \eqref{eq:forward.recursion}. Let $B_\infty(B_1^t):=\{ \xi\in \Reals^t: |\xi_i|\leq B_i,i=1,\ldots,t\}$ be the hypercube with sides of length $B_1,\ldots, B_t$ and $X_t$ be the matrix with columns $\x_1,\ldots, \x_t$. For a given covariate budget $\SSigma$ and label budget $\gamma_0$, define the continuation condition 
+\begin{equation}\label{eqn:C.def}
+\mathcal C\left(\SSigma, \gamma_0\right)
+  \df
+  \left \{
+    \x_1^T:    
+  \gamma_{t}\geq
+      \xi^\top\X_{t}^\top \left(\Pi_{t}^\dagger- \P_{t} \right)\X_{t}\xi
+      \;\;\forall \xi \in B_\infty(B_t) \text{ and }
+      t=1,\ldots,T \right\},
+\end{equation}
+which is equivalent to requiring that
+$
+  \s_{t}^\top\left(\Pi_{t}^\dagger- \P_{t} \right)\s_{t}
+  \leq \gamma_t
+$
+for all possible $\s_t$.
+
+The rest of this section proves the main result of this paper: if the adversary plays in 
+$
+  \mathcal{ABC}(\SSigma,\gamma_0)
+\df
+\mathcal{A}(\SSigma)\cap\mathcal{B}(\SSigma)\cap\mathcal{C}(\SSigma,\gamma_0)
+$, then \eqref{eq:strategy} is minimax optimal.
+\begin{theorem}
+  \label{thm:main}
+  Consider the two player game defined in Figure~\ref{fig:protocol}. For any $\{B_t\}>0$, $\SSigma \succ 0$ and $\gamma_0 \geq 0$, the player strategy \eqref{eq:strategy} has minimax regret $\gamma_0$ and is horizon-independent minimax optimal for $\x_1^T\in\mathcal X = \mathcal{ABC}(\SSigma,\gamma_0)$ and $y_1^T \in \mathcal Y = \mathcal L(B_t)$. That is,
+  \begin{equation*}
+    \sup_{T}
+    \left(
+      \sup_{\x_1^T\in\mathcal X, y_1^T\in\mathcal Y}
+      R_T(\eqref{eq:strategy},\x_1^T, y_1^T)
+      - \min_s
+      \sup_{\x_1^T\in\mathcal X, y_1^T\in\mathcal Y}
+            R_T(s,\x_1^T, y_1^T)
+    \right)=0.
+  \end{equation*}
+\end{theorem}
+We will prove Theorem~\ref{thm:main} by first considering adversarial strategies under $\mathcal A(\SSigma)$ with a fixed game length. We show that, somewhat counterintuitively, the adversary may cause more regret by not using the entire $\SSigma$ budget. Then, we show that the $\mathcal C$ condition eliminates these troublesome cases and the adversary exhausts the budget; therefore, the adversary plays $\x_1^T\in\overline{\mathcal A}(\SSigma)$ which implies that that \eqref{eq:strategy} is minimax optimal by results of the previous section. Finally, we note that all the previous arguments apply uniformly across $T$, and since \eqref{eq:strategy} is ignorant of $T$, it must be horizon-independent minimax optimal. The $\SSigma$ constraint, not the game length, seems to be the correct notion of game size.
+
+\vspace{-.7em}
+\subsection{Limiting $T$}
+\vspace{-.4em}
+Consider a fixed $T>0$ and define 
+$
+   \mathcal A_T(\SSigma)\df \left\{
+    \x_1^T\in\left(\Reals^d\right)^T: \P_0^\dagger = \SSigma\text{ and }\P_t^\dagger \succeq
+    \Pi_t \,\, \forall 1\leq t \leq T\right\}
+$,
+the restriction of $\mathcal A(\SSigma)$ to sequences of length $T$. This goal of this section is to show i) that it is possible for the adversary to cause more regret by not using up the covariance budget, i.e. $\P_T^\dagger \succ \Pi_T$, and ii) that the $\mathcal C$ conditions are sufficient to stop this.
+
+We cannot calculate the minimax solution of $\mathcal A_T(\SSigma)$
+directly. Section~\ref{sec:calculating.full.minimax} in the appendix
+explicitly evaluates the first backwards induction step; it is quite
+complicated and has no closed form solution, and this suggests that
+efficient backwards induction is unlikely.
+Instead, we will study the related fixed-design \markdef{early-stopping} game. For some fixed $\x_1^T$, the game protocol is: at round $t$, the learner predicts $\hat y_t$, the
+adversary chooses $e_t\in\{0,1\}$ and $y_t\in\mathcal L(B_1^T)$. If $e_t = 1$, the learner incurs loss $(\hat y_t - y_t)^2$ and the game continues, but if $e_t = 0$, the game ends. Intuitively, the adversary may be able to cause more regret because the learner is regularizing for a covariance budget corresponding to $\x_1^T$, and therefore ending the game early causes the learner to over-regularize. 
+
+We will derive $\mathcal C$ as a condition where the adversary always continues to $T$. In turn, this implies that the adversary will use up the $\SSigma$ budget in the $\mathcal A_T$ game: any $\x_1^T$ with remaining $\SSigma$ budget has a continuation $\x_1^{T+k}\in\overline{\mathcal A}(\SSigma)$ by Lemma~\ref{lemma:P.consistency}, and the $\mathcal C$ condition implies that the adversary will continue until $T+k$ and use up the budget. We will make this argument formal.
+
+We begin by defining an incremental version of regret. Define
+$
+\Delta^*_t 
+\df 
+  \min_{\theta \in \Reals^d} \sum_{s=1}^t (\theta^\top \x_s - y_s)^2
+-
+\min_{\theta' \in \Reals^d} \sum_{s=1}^{t-1} (\theta'^\top \x_s - y_s)^2
+$,
+ the additional loss suffered by the comparator from playing $t$ rounds instead of $t-1$ rounds. We have $\Delta_t^*\geq 0$ and $L_T^* = \sum_{t=1}^t \Delta_t^*$. The regret of the game with early stopping can be written as
+$
+\Regret_T = \sum_{t=1}^T
+    \left(\prod_{s=1}^t e_s\right)\left((y_t - \hat y_t)^2 - \Delta_t^*\right)
+$.
+One might notice that $\delta_t^* = 0$ for the choice $y_t =
+{\theta_{t-1}^*}^\top\x_t$, where $\theta_{t-1}^*$ is the ordinary
+least squares solution on data through time $t-1$, and the regret
+always increases. However, this choice of $y_t$ may violate the label
+constraints, in particular, for $B_t = 1$ and $x_t\in \Reals$
+increasing. Additionally, we want a constraint where the adversary
+wants to play \emph{all} remaining rounds, not just the next one, and hence the constraint on $\y_t$ will depend on the future covariates.
+
+  The value-to-go definition also needs to be adapted to the incremental setting. To this end, we define the instantaneous value-to-go $W(\s_t,\sigma_t^2,t,\x_1^T)$ by
+$ W(\s_T, \sigma_T^2, T, \x_1^T) = 0$ and
+\begin{align*}
+  W(\s_{t-1}, \sigma_{t-1}^2, t-1, \x_1^T)
+  &=
+    \max_{e_t\in\{0,1\}}
+    e_t\left(
+    \min_{\hat y_{t}}\max_{y_{t}} (\hat y_{t} - y_{t})^2 -\Delta_{t}^*
+    + W(\s_t, \sigma_t^2, t,\x_1^T) \right),
+\end{align*}
+where the statistics are updated as
+$\s_t = \s_{t-1}+y_t\x_t$ and $\sigma_t^2 = \sigma_{t-1}^2 + y_t^2$.
+It is easy to check that $\W_0$ is the minimax regret for this game and that it equals the regret of the fixed design game when the adversary plays every round.
+
+\vspace{-.7em}
+\subsection{Calculating the Instantaneous Value-to-go}
+\vspace{-.4em}
+This section derives $\mathcal C$ as the condition where $e_t = 1$ for all $t$ and evaluates $W_{t}$. Throughout, $\mathcal R(\M)$ denotes the row space of matrix $\M$. Proofs from this section are heavy on calculation and have been collected in Appendix~\ref{sec:delta.calculation}. We begin by explicitly calculating $\Delta_t^*$.
+\begin{lemma}
+\label{lemma:delta.calculation}
+  The marginal loss for the comparator of playing another round with covariate $\x = \x_\parallel + \x_\perp$, where $\x_\parallel\in\mathcal R(\Pi_{t-1})$ and $\x_\perp$ is its orthogonal complement, is
+  \begin{equation*}
+    \Delta_t^* 
+    =
+    y_t^2\left( 1-\x_t^\top \Pi_t^\dagger \x_t\right)
+      - 2 y_t \s_{t-1}^\top \Pi_t^\dagger \x_t
+      +\left(\s_{t-1}^\top\Pi_t^\dagger \x_t\right)^2
+      \frac{\x_t^\top\Pi_{t-1}^\dagger\x_t}
+      {\x_t^\top\Pi_t^\dagger\x_t}.
+  \end{equation*}
+\end{lemma}
+\begin{theorem}
+  \label{thm:W.value}
+  Consider the fixed-design game with early stopping, with
+  covariates $\x_1^T$. Define the $\P_t$ by the backwards recursion
+  \eqref{eq:def.P} and define $\gamma_t = \sum_{s=t+1}^T B_s^2
+  \x_s^\top\P_s\x_s$. Suppose that, for all $t$,
+%\begin{equation}
+ % \label{eq:continuation}
+  $
+  \gamma_t \geq \s_t^\top \left(\Pi_t^\dagger - \P_t\right)\s_t
+  $.
+%\end{equation}
+  Then the instantaneous value-to-go is 
+  $
+  W(\s_t,\sigma_t^2,t,\x_1^T) = \s_{t}^\top\left(\P_{t} - \Pi_t^\dagger\right) \s_{t}
+  + \gamma_{t}
+$,
+the adversary causes more regret by continuing the game,
+and the optimal learner strategy is \eqref{eq:strategy}.
+\end{theorem}
+\begin{proof}[Proof outline]
+The proof is by induction, where the base case is easily established with $\gamma_T = 0$ and $\P_T = \Pi_T^\dagger$.
+Now, assuming that
+  $
+    W(\s_{t},\sigma_t^2,t,\x_1^T) = \s_{t}^\top\left(\P_{t}-\Pi_t^\dagger\right)\s_{t}
+    + \gamma_{t}
+    $,
+we wish to calculate the $t-1$ case by evaluating
+$
+ W(\s_{t-1},\sigma_{t-1}^2,t-1,\x_1^T)
+  =
+  \max_{e_{t}\in\{0,1\}}e_{t}\left( \min_{\hat y_{t}}\max_{y_{t}} (\hat y_{t}-y_{t})^2 
+    - \Delta_{t}^*+W_{t}(\s_{t},\sigma_t^2,\x_1^T)\right)
+ $.
+  We use our expression for $\Delta_t^*$, perform elementary calculations to evaluate the saddle-point, and show that the above evaluates to
+\begin{align*}
+\max\left\{ \left(\s_{t-1}^\top \P_t \x_{t}\right)^2
+    + B_t^2\x_t^\top\P_t\x_t
+    -\left(\s_{t-1}^\top\Pi_{t}^\dagger \x_{t}\right)^2
+    \frac{\x_{t}^\top\Pi_{t-1}^\dagger\x_{t}}
+    {\x_{t}^\top\Pi_{t}^\dagger\x_{t}}
+        +\s_{t-1}^\top\left(\P_{t}-\Pi_t^\dagger\right)\s_{t-1}
+    +  \gamma_{t}, 0\right\},
+\end{align*}
+which can be shown to always take the first value so long as $\gamma_{t-1}\geq\s_{t-1}^\top\left(\Pi_{t-1}^\dagger- \P_{t-1} \right)\s_{t-1}$. In this case, the induction hypothesis is verified with the $\P_t$ update described in the theorem. This implies that the instantaneous value-to-go is always positive and that an optimal adversary will always continue. As a consequence, the covariate sequence $\x_1^T \in\overline{\mathcal A}(\P_0^\dagger)$, which confirms that \eqref{eq:strategy} using the forward recursion is minimax optimal via Theorem~\ref{thm:forward.minimax}.
+\end{proof}
+
+% The techniques of this proof are very similar to the original minimax analysis in \cite{minimax.regression}, so we feel it is sufficient to present a brief description of the innovations with the complete proof moved to Appendix~\ref{sec:proof.of.W.value} We use the formula of Lemma~\ref{lemma:delta.calculation} to explicitly evaluate the $\Delta_t^*$ term and then explicitly solve for the $\hat y_t$ and $y_t$ term in the backwards induction to yield
+% \[
+%     W_{t}(\s_{t}) = \max_{e_t}\left(\s_{t}^\top\left(\P_{t} - \Pi_t^\dagger\right) \s_{t}
+%     + \gamma_{t}\right),
+%     \]
+% where we easily check that $e_t = 1$ if \eqref{eq:continuation} holds; i.e.\ the future value-to-go is positive, so the adversary can cause more regret by continuing. Hence, if \eqref{eq:continuation} always holds, then the adversary continues every round and plays with the entire sequence $\x_1^T$. The fact that the optimal value $\hat y_t$ is equal to \eqref{eq:strategy} is not a priori obvious and comes out of the analysis.
+
+
+
+% Hence, we have one more game where \eqref{eq:strategy} is the minimax strategy: fixed-design with possible early stopping when the adversary adheres to the continuation constraints \eqref{eq:continuation}. While the game with adversary allowed stopping might be of independent interest, we will use the continuation constraints to define restrict the covariate sequences playable by the adversary to those that are consistent with  $\SSigma$ and the learner can play optimally. 
+
+% \begin{equation}
+%   \label{eq:continuation.constraint}
+%   \mathcal C(\x_1^T, B_1^T)
+%   \df
+%   \left \{
+%   y_1^T:
+%   \gamma_{t-1}\geq\s_{t-1}^\top\left(\Pi_{t-1}^\dagger- \P_{t-1} \right)\s_{t-1}\forall t=1,\ldots,T \right\}.
+% \end{equation}
+% where $\gamma_t = \sum_{s=t-1}^T B_t^2\x_t^\top\P_t\x_t$.
+
+%\subsection{Proof of Theorem~\ref{thm:main}}
+All the ingredients are in place to prove our main result. For convenience, define
+$
+  \overline{\mathcal{ABC}}(\SSigma,\gamma_0)
+  \df
+  \{
+  \x_1^T \in \mathcal{ABC}(\SSigma,\gamma_0): \P_T = \Pi_T^\dagger, \gamma_T = 0
+  \},
+$
+the set of sequences that deplete the $\SSigma$ and $\gamma_0$ budgets. Roughly, we will argue that, under $\mathcal C(\SSigma,\gamma_0)$, the adversary causes the most regret by playing $\x_1^T\in\overline{\mathcal A}(\SSigma)$, which implies that $\x_1^T \in \overline{\mathcal{ABC}}(\SSigma,\gamma_0)$ and the regret is $\gamma_0$. 
+The first step in the analysis is to check that the
+constraint set is non-trivial.
+\begin{lemma}
+  \label{lem:optimal.covariate.existence}
+  Consider the game defined by $\SSigma\succeq 0$, $\gamma_0\geq \norm{B_t}_\infty$ and a $B_t$ sequence. If there exists some $T$ such that 
+%  \begin{equation}
+ %   \label{eqn:gamma.0.condition}
+ $ \sum_{t=1}^T  \frac{B_t^2}{t + \log(T+1)} \geq \gamma_0$,
+%\end{equation}
+then there exists a covariate sequence $\x_1^T \in\overline{\mathcal{ABC}}(\SSigma,\gamma_0)$.
+In particular, any $B_t$ that are bounded below satisfy this condition.
+\end{lemma}
+ 
+In reasoning about optimal strategies,
+Theorem~\ref{thm:W.value} allows us to easily establish
+conditions when the learner is playing suboptimally and could be
+causing more regret. However, Theorem~\ref{thm:W.value} applies to
+a fixed design game
+%$\x_1,\ldots,\x^T$
+that is allowed to stop early,
+and we wish to reason about the adversarial covariate case. The next
+lemma makes the crucial connection.
+\begin{lemma}
+  \label{lem:W.extension}
+  Suppose $\x_1^t\in\mathcal{ABC}(\SSigma, \gamma_0)$ but $\gamma_t
+  > 0$. Then there exists an extension $\x_{t+1},\ldots,\x_T$ in
+  $\mathcal{ABC}(\SSigma, \gamma_0)$ with
+  $\x_1^T \in \overline{\mathcal A}(\SSigma, \gamma_0)$ and
+  $W(\s_t,\sigma_t^2,t,\x_1^T) = \s_t^\top(\P_t - \Pi_t^\dagger)\s_t + \gamma_t$ equal
+  to the instantaneous value-to-go.
+\end{lemma}
+The proof is a simple consequence of checking that the extension Lemma~\ref{lemma:P.consistency} is compatible with condition $\mathcal C$. We can now prove the minimax optimality of \eqref{eq:strategy} on the $\mathcal{ABC}$ game.
+
+
+\begin{proof}[Proof of Theorem~\ref{thm:main}.]
+  We will show something stronger: the optimal adversary strategy for the game in Figure~\ref{fig:protocol} plays an $\x_1^T$ sequence in $\overline{\mathcal{ABC}}$ and causes exactly $\gamma_0$ regret against \eqref{eq:strategy}. 
+
+ First, assume that the game stops before round $T+1$ and
+  $\x_1,\ldots,\x_T$ have been played. There are four possible
+  scenarios depending on whether the $\SSigma$ or $\gamma_0$ budgets are
+  exhausted.
+
+  \textbf{Case: both budgets exhausted.} In this case,  $\x_1^T \in \overline{\mathcal{ABC}}(\SSigma,\gamma_0)$ and optimal holds by results from Section~\ref{sec:forward.algorithm}.
+
+  \textbf{Case: neither budget exhausted.}
+  We apply Lemma~\ref{lemma:P.consistency} to conclude that there exists a covariate sequence $\x_{T+1}^{T+k}$ that uses up the $\SSigma$ budget. The $\mathcal C(\SSigma,\gamma_0)$ constraint guarantees that the adversary can cause more regret by playing these rounds. Hence, an adversary that exhausts neither budget is suboptimal.
+
+  \textbf{Case: only $\SSigma$ budget exhausted.}
+Since $\P_t-\Pi_t^\dagger\succeq 0$, we cannot exhaust the $\gamma_0$ before the $\SSigma$ budget and still satisfy the $\mathcal C$ constraint.
+
+\textbf{Case: only $\gamma_0$ budget exhausted.}  If the $\SSigma$ budget is exhausted, then $\x_1^T\in\mathcal{A}$  and hence the minimax regret is $\sum_{t=1}^T B_t^2 \x_t^\top\P_t\x_t$ by Theorem~\ref{thm:forward.minimax}. Since $\gamma_T = \gamma_0 -\sum_{t=1}^T B_t^2 \x_t^\top\P_t\x_t$, the adversary strategy is suboptimal if $\gamma_T > 0$ since it is possible to cause $\gamma_0$ regret. These arguments cover all four cases, we can conclude that the adversary can cause at most $\gamma_0$ regret and that any strategy that causes $\gamma_0$ regret must exhaust the $\SSigma$ and $\gamma_0$ budgets.
+
+In all cases, the adversary can cause at most $\gamma_0$ regret and it is necessary for the adversary to play $\x_1^T \in \overline{\mathcal{ABC}}(\SSigma,\gamma_0)$, which implies that \eqref{eq:strategy} is optimal. In other words, for  $\x_1^T\in\mathcal X = \mathcal{ABC}(\SSigma,\gamma_0)$ and $y_1^T \in \mathcal Y = \mathcal L(B_t)$, we have 
+  \begin{equation*}
+      \sup_{\x_1^T\in\mathcal X, y_1^T\in\mathcal Y}
+      R_T(\eqref{eq:strategy},\x_1^T, y_1^T)
+      - \min_s
+      \sup_{\x_1^T\in\mathcal X, y_1^T\in\mathcal Y}
+            R_T(s,\x_1^T, y_1^T)
+            =0
+  \end{equation*}
+for all $T>0$, which implies the result.
+\end{proof}
+
+\vspace{-1.3em}
+\paragraph{The Necessity of a $\gamma_0$ Bound}
+Requiring a $\gamma_0$ bound may seem artificial at first, especially
+since it translates directly into a bound on the regret. However, it
+is a reasonable constraint to impose, for several reasons. First, recall that Lemma~\ref{lemma:A.B.infinite.regret} argues that the regret of just the $\mathcal A(\SSigma)\cap \mathcal B(\SSigma)$ game is infinite. Second, the restriction on the adversary is mild: if $\x_1^T \in \mathcal{ABC}(\SSigma,\gamma_0)$, then $\x_1^T \in \mathcal{ABC}(\SSigma,\gamma')$ for $\gamma' \geq \gamma_0$, and so the budget can be adjusted online. Finally, we emphasize that the learner does
+not need to know $\gamma_0$ to play \eqref{eq:strategy}.
+
+
+% \subsection{The forward game is non-trivial from any point}
+% \label{sec:forward.game.non.empty}
+% The main result of the last section only argued about the existence of full covariate sequences $\x_1^T$ that attained the $\mathcal{A}$ and $\mathcal{B}$ constraint with equality. This section shows that if we have any history $\x_1^t$ that satisfies the $\mathcal{ABC}$ constraints, there is some completion that hits them exactly. \todo{figure out this terminology.}
+
+
+\vspace{-.7em}
+\section{Follow the Regularized Leader}
+\vspace{-.4em}
+\label{sec:FTRL}
+The minimax strategy \eqref{eq:strategy} can be interpreted as playing follow-the-regularized-leader with a certain
+data-dependent regularizer. 
+\begin{lemma}\label{lemma:FTRL}
+The minimax strategy \eqref{eq:strategy} is exactly follow-the-regularized-leader, predicting $\hat y_t = \theta^\top\x_t$
+at round $t$, where regularization matrices $\R_t$ are
+\begin{equation}
+  \label{eq:def.R}
+  \R_0 \df \P_0^{-1}\text{, and }  \R_t \df \R_{t-1}+\frac{1}{1+\x_t^\top\P_t\x_t}\x_t\x_t^\top-\x_{t-1}\x_{t-1}^\top,
+\end{equation}
+and $\theta$ is the solution to
+$
+    \min_{\theta} \sum_{s=1}^{t-1}
+    (\theta^\top\x_s-y_s)^2+\theta^\top\R_t\theta
+$.
+\end{lemma}
+
+It is also possible to derive a $\R_t$ recursion without referring to $\P_t$; see Lemma~\ref{lem:R.without.P}. For comparison, the last step minimax algorithm \citep{azoury2001relative} plays 
+$\hat y_t = \left(\sum_{s=1}^t\x_s\x_s^\top\right)^{-1}\s_{t-1}$, so we can also view the minimax algorithm as last step minimax with a regularization of $\sum_{s=t+1}^T\frac{\x_s^\top\P_s\x_s}{1+\x_s^\top\P_s\x_s}\x_s\x_s^\top$.
+% \begin{equation}
+%   \R_t = \R_{t-1}
+%   + \frac{2\x_t\x_t^\top}{\sqrt{1+4\x_t^\top\left(\R_{t-1}+\sum_{s=1}^{t-2}\x_s\x_s^\top\right)^{-1}\x_t}+1}-\x_{t-1}\x_{t-1}^\top.
+% \end{equation}
+
+
+%\section{Regret bound}
+%\label{sec:regret.bound}
+We have shown that for the adversarial covariates protocol with $\mathcal X = \mathcal{ABC}(\SSigma,\gamma_0)$, \eqref{eq:strategy} is the minimax optimal strategy and receives $\gamma_0$ regret. Our last result helps quantify this regret by proving a $O(\log(T))$ regret bound for the games analyzed in Section~\ref{sec:forward.algorithm}.
+\begin{theorem}
+  \label{thm:regret.bound}
+For any fixed $T$ and $B_1^T$,  the minimax regret of the
+box-constrained game has the bound
+    \begin{equation*}
+\sup_{\x_1^T\in\overline{\mathcal A}(\SSigma)}\sup_{y_1^T\in\mathcal L(B_1^T)}R_T(s^*,\x_1^T,y_1^T)
+  \leq
+  \frac{d\|B_1^T\|_\infty}{\|\SSigma\|_2}\left(
+  1 + 2 \ln \left(1 +
+  \frac{||\SSigma||_2^2}{2\|B_1^T\|_\infty^2}
+  ||B_1^T||_2^2
+  \right)\right).
+    \end{equation*}
+  \end{theorem}
+%   The proof is a generalization of the techniques in \citep[Theorem
+% 5]{minimax.regression} and we only present an outline, with details in Appendix~\ref{sec:regret.bound.proof}.
+  
+
+
+\section{Conclusion}
+We have presented the minimax optimal strategy for online linear
+regression where the covariate and label sequence are chosen
+adversarially and the measure of game length is a covariance budget
+instead of the number of rounds. Because the strategy has access to a
+more informative measure of game size, $\SSigma$, it can compete with
+strategies that know the number of rounds. The minimax strategy is
+efficient and only needs to update two parameters: $\P_t$, a summary
+of the covariance left in the budget, and
+$\s_t = \sum_{s=1}^t y_s \x_s$.
+
+One could interpret the results of our paper as finding a more natural
+way to measure the length of the game that admits a tractable minimax
+strategy. What other game protocols can be reparameterized to admit
+efficient minimax strategies? As a general method, one could start
+with minimax algorithms for constrained cases then search for
+parameterizations which preserve the optimality.
+
+We have also provided an intuitive view of the algorithm as
+follow-the-regularized-leader with a specific data-dependent
+regularizer. This interpretation can be used to bound the excess
+regret when the budget $\SSigma$ is misspecified, as the
+misspecification can be thought of as a distortion of the optimal
+regularizer. Similarly, we can analyze the setting when $\SSigma$ is
+not known and must be estimated e.g.\ with a doubling trick.
+
+\bibliography{../../online_graphs}
+
+
+\newpage
+\appendix
+
+\section{Extra Lemmas}
+\begin{lemma}\label{lemma:scale_invariance}
+  Let $\x_1^T$ be any covariate sequence and $\P_1,\ldots,\P_T$ the
+  associated precision matrices given by the backwards
+  recursion~\eqref{eq:def.P}. For any invertible matrix
+  $\W\in\Reals^{d\times d}$, let $\x_t' = \W\x_t$.
+  Then the precision matrices of
+  $\x_1',\ldots,\x_T'$ are exactly $\P_t' = {\W^\dagger}^\top \P_t
+  \W^\dagger$ and $\x_t^\top\P_t\x_t = \x_t'^\top\P_t'\x_t'$.
+\end{lemma}
+\begin{proof}
+  First, we can easily check that
+  $
+    \P'_T = \left(\sum_{t=1}^T\x'_t{\x_t'}^\top\right)^\dagger 
+    = (\W^\top)^\dagger\left(\sum_{t=1}^T\x_t\x_t^\top\right)^\dagger \W^\dagger
+  $.
+  Now, assume that the hypothesis holds for $t$. Then
+  \begin{align*}
+    \P'_{t-1} =& \P'_t + \tilde\P_t\x'_t{\x_t'}^\top\P'_t\\
+    =& {\W^\dagger}^\top\P_t \W^\dagger
+    + {\W^\dagger}^\top \left(\P_t \W^\dagger \W\x_t \x_t\W^\top {\W^\dagger}^\top \P_t\right) W^\dagger\\
+    =& {\W^\dagger}^\top \P_{t-1} \W^\dagger.
+  \end{align*}
+\end{proof}
+
+\section{Calculating $\Delta_t^*$}
+\label{sec:delta.calculation}
+While the update of $\P_t$ is given by the forward recursion, the rank one update of $\Pi_t$ is more complicated; Sherman-Morrison cannot be used directly.  
+\begin{lemma}
+  \label{lem:pi.update}
+Using $\x_\perp\df \x - \Pi_{t-1}\Pi_{t-1}^\dagger\x$ to denote the projection of $\x_t$ onto the orthogonal complement of $\Pi_{t-1}$, we have 
+  \begin{align*}
+\Pi_t^\dagger
+    &=
+      \begin{cases}
+    \Pi_{t-1}^\dagger
+    -
+    \displaystyle\frac{    \x_\perp\x^\top \Pi_{t-1}^\dagger
+      + \Pi_{t-1}^\dagger\x\x_\perp^\top}
+    {\x_\perp^\top\x_\perp}
+    +\frac{
+      \x_\perp\left(1+\x^\top \Pi_{t-1}^\dagger\x\right)\x_\perp^\top
+    }{(\x_\perp^\top\x_\perp)^2}
+    & \text{ if $\x\notin\mathcal C(\Pi_{t-1})$, and }\\[6mm]
+    \Pi_{t-1}^\dagger + \displaystyle\frac{\Pi_{t-1}^\dagger\x_t\x_t^\top \Pi_{t-1}^\dagger}
+    {1-\x_t^\top \Pi_{t-1}^\top\x_t^\top}
+    & \text{ otherwise }.
+      \end{cases}
+\end{align*}
+\end{lemma}
+\begin{proof}
+  \label{proof:lem:delta_t}
+We will write $\X$ as the matrix with columns $\x_1,\ldots,\x_{t-1}$.
+Thus, we have
+\[
+\Pi_t = \Pi_{t-1}+\x\x^\top = 
+\begin{bmatrix}
+  \X & \x
+\end{bmatrix}
+\begin{bmatrix}
+  \X^\top \\ \x^\top
+\end{bmatrix},
+\]
+and since $\X$ has linearly independent columns, (without loss of
+generality; we shall see why later), 
+$\begin{bmatrix}
+  \X & \x
+\end{bmatrix}
+$
+has linearly independent columns since $x$ is not in the column space of $\X$. Therefore, we have
+\[
+\begin{bmatrix}
+  \X & \x
+\end{bmatrix}^\dagger 
+= \left(
+\begin{bmatrix}
+  \X^\top \\ \x^\top
+\end{bmatrix}
+\begin{bmatrix}
+  \X & \x
+\end{bmatrix}
+\right)^{-1}
+\begin{bmatrix}
+  \X^\top \\ \x^\top
+\end{bmatrix}
+\]
+and
+\[
+\Pi_t^\dagger=\left(\Pi_{t-1} + \x\x^\top\right)^\dagger
+=\begin{bmatrix}
+  \X & \x
+\end{bmatrix}
+\left(
+\begin{bmatrix}
+  \X^\top \\ \x^\top
+\end{bmatrix}
+\begin{bmatrix}
+  \X & \x
+\end{bmatrix}
+\right)^{-2}
+\begin{bmatrix}
+  \X^\top \\ \x^\top
+\end{bmatrix}.
+\]
+
+Now, recall that the matrix that projects onto the column space of $\X$ is $\mathcal P \df \X\X^\dagger$ and define  $\x_\parallel \df \mathcal P\x$  and $\x_\perp = \x-\x_\parallel$. We can calculate the middle matrix by using the block matrix inversion formula:
+\begin{align*}
+\left(
+\begin{bmatrix}
+  \X^\top \\ \x^\top
+\end{bmatrix}
+\begin{bmatrix}
+  \X & \x
+\end{bmatrix}
+\right)^{-1}
+% & = 
+% \begin{bmatrix}
+%          \left(\X^\top\X\right)^{-1} + \frac{\left(\X^\top\X\right)^{-1}\X^\top\x\x^\top \X\left(\X^\top\X\right)^{-1}}{\x^\top\x - \x^\top\X \left(\X^\top\X\right)^{-1}\X^\top\x} 
+%          & \frac{-\left(\X^\top\X\right)^{-1}\X^\top\x}{\x^\top\x - \x^\top\X \left(\X^\top\X\right)^{-1}\X^\top\x}\\
+%          \frac{-\x^\top\X\left(\X^\top\X\right)^{-1}}{\x^\top\x - \x^\top\X \left(\X^\top\X\right)^{-1}\X^\top\x}&
+%          \frac{1}{\x^\top\x - \x^\top\X \left(\X^\top\X\right)^{-1}\X^\top\x}\\
+%        \end{bmatrix}\\
+& = 
+\begin{bmatrix}
+         \left(\X^\top\X\right)^{-1} + \frac{\X^\dagger\x\x^\top {\X^\top}^\dagger}{\x^\top\x - \x^\top\mathcal P\x} 
+         & \frac{-\X^\dagger\x}{\x^\top\x - \x^\top\mathcal
+         P\x}\\[3mm]
+         \frac{-\x^\top{\X^\top}^\dagger}{\x^\top\x - \x^\top\mathcal P\x}&
+         \frac{1}{\x^\top\x - \x^\top\mathcal P\x}\\
+       \end{bmatrix}\\
+& = 
+\frac{1}{\x^\top\x - \x_\parallel^\top\x_\parallel}
+\begin{bmatrix}
+         \left(\X^\top\X\right)^{-1}\left(\x^\top\x - \x_\parallel^\top\x_\parallel\right) +\X^\dagger\x\x^\top {\X^\top}^\dagger&
+         -\X^\dagger\x\\[3mm]
+         -\x^\top{\X^\top}^\dagger&
+         1\\
+       \end{bmatrix},
+\end{align*}
+and so
+\begin{align*}
+\left(
+\begin{bmatrix}
+  \X^\top \\ \x^\top
+\end{bmatrix}
+\begin{bmatrix}
+  \X & \x
+\end{bmatrix}
+\right)^{-1}
+\begin{bmatrix}
+  \X^\top \\ \x^\top
+\end{bmatrix}
+& = 
+\frac{1}{\x^\top\x - \x_\parallel^\top\x_\parallel}
+\begin{bmatrix}
+  \X^\dagger\left(\x^\top\x - \x_\parallel^\top\x_\parallel\right)
+  - \X^\dagger\x\x_\perp^\top\\
+  \x_\perp^\top
+       \end{bmatrix}.
+\end{align*}
+Using the Pythagorean theorem (i.e.\ that $\x^\top\x = \x_\parallel^\top\x_\parallel+\x_\perp^\top\x_\perp$) and that $\Pi_{t-1}^\dagger = {\X^\top}^\dagger\X^\dagger$, we have 
+\begin{align*}
+\Pi_t^\dagger
+&=\frac{1}{\left(\x_\perp^\top\x_\perp\right)^2}
+\begin{bmatrix}
+  {\X^\dagger}^\top\x_\perp^\top\x_\perp 
+  - \x_\perp\x^\top {\X^\top}^\dagger &
+         \x_\perp
+       \end{bmatrix}
+\begin{bmatrix}
+  \X^\dagger\x_\perp^\top\x_\perp 
+  - \X^\dagger\x\x_\perp^\top\\
+         \x_\perp^\top
+       \end{bmatrix}\\
+&=
+\frac{1}{\left(\x_\perp^\top\x_\perp\right)^2}
+\left(
+\Pi_{t-1}^\dagger\left(\x_\perp^\top\x_\perp\right)^2
+-
+\x_\perp^\top\x_\perp 
+\left(
+ \x_\perp\x^\top \Pi_{t-1}^\dagger
++ \Pi_{t-1}^\dagger\x\x_\perp^\top
+\right)
+\right)\\
+&\quad
++\frac{
+ \x_\perp\x^\top \Pi_{t-1}^\dagger\x\x_\perp^\top
+}{\left(\x_\perp^\top\x_\perp\right)^2}
++
+  \frac{\x_\perp\x_\perp^\top
+  }{\left(\x_\perp^\top\x_\perp\right)^2}\\
+&=
+    \Pi_{t-1}^\dagger
+    -
+    \frac{    \x_\perp\x^\top \Pi_{t-1}^\dagger
+    + \Pi_{t-1}^\dagger\x\x_\perp^\top}
+    {\x_\perp^\top\x_\perp}
+  +\frac{
+  \x_\perp\left(1+\x^\top \Pi_{t-1}^\dagger\x\right)\x_\perp^\top
+  }{(\x_\perp^\top\x_\perp)^2}.
+\end{align*}
+
+Thus, we can evaluate
+\begin{align*}
+  \x^\top\Pi_t^\dagger\x
+  &=
+    \x^\top\Pi_{t-1}^\dagger\x
+    -
+    \frac{    \x^\top\x_\perp\x^\top \Pi_{t-1}^\dagger\x
+    + \x^\top\Pi_{t-1}^\dagger\x\x_\perp^\top\x}
+    {\x_\perp^\top\x_\perp}
+  +\frac{
+  \x^\top\x_\perp\left(1+\x^\top \Pi_{t-1}^\dagger\x\right)\x_\perp^\top\x
+                           }{(\x_\perp^\top\x_\perp)^2}\\
+  &=
+    \x^\top\Pi_{t-1}^\dagger\x
+    -2    \x^\top\Pi_{t-1}^\dagger\x
+    +1+\x^\top \Pi_{t-1}^\dagger\x\\
+  &=
+    1,
+\end{align*}
+and
+\begin{align*}
+  \x^\top\Pi_t^\dagger\s
+  &=
+    \x^\top\Pi_{t-1}^\dagger\s
+    -
+    \x^\top \Pi_{t-1}^\dagger\s
+    - \frac{\x^\top\Pi_{t-1}^\dagger\x\x_\perp^\top\s}{\x_\perp^\top\x_\perp}
+  +\frac{
+    \left(1+\x^\top \Pi_{t-1}^\dagger\x\right)\x_\perp^\top\s
+    }{\x_\perp^\top\x_\perp}\\
+  &=
+    -\frac{\x^\top\Pi_{t-1}^\dagger\x\x_\perp^\top\s}{\x_\perp^\top\x_\perp}
+  +\frac{
+    \left(1+\x^\top \Pi_{t-1}^\dagger\x\right)\x_\perp^\top\s
+    }{\x_\perp^\top\x_\perp}\\
+  &=
+    0.
+\end{align*}
+Finally, notice that
+\begin{align*}
+  \s^\top\Pi_t^\dagger\s
+  &=
+    \s^\top\Pi_{t-1}^\dagger\s
+\end{align*}
+since $\x_\perp^\top\s = 0$.
+
+The second case is a consequence of the Sherman-Morrison formula. Since $\Pi_t$, $\Pi_{t-1}$, and $\x_t$ are all in the same eigenspace, we can without loss of generality assume full rank and apply Sherman-Morrison. A precise formulation can also be found in e.g. \cite{harvillematrix}.
+\end{proof}
+
+\begin{lemma}
+\label{lemma:next.covariances}
+  For a PSD symmetric matrix $\Pi$, $s\in{\cal R}(\Pi)$ and
+  $x\not\in{\cal R}(\Pi)$, we have
+    \begin{align*}
+      x^\top\left(\Pi+xx^\top\right)^\dagger x & = 1, \\
+      s^\top\left(\Pi+xx^\top\right)^\dagger x & = 0, \\
+      s^\top\left(\Pi+xx^\top\right)^\dagger s & = 
+      s^\top\Pi^\dagger s.
+    \end{align*}
+\end{lemma}
+
+\begin{proof}
+  Write the small SVD $\Pi=U\Lambda U^\top$ (that is, diagonal
+  $\Lambda$, $U$ with orthonormal columns).
+  Choose a unit vector $v$, vectors $a$ and $b$, and scalar
+  $\alpha\not=0$ so that
+    \begin{align*}
+      U^\top v & =0, &
+      x & = Ua + \alpha v, &
+      s & = Ub.
+    \end{align*}
+  Define
+    \begin{align*}
+      w & = \left(\Pi+xx^\top\right)^\dagger x, &
+      r & = \left(\Pi+xx^\top\right)^\dagger s.
+    \end{align*}
+  Because these are the minimal norm solutions to the linear equations
+    \begin{align*}
+      \left(\Pi+xx^\top\right)w & = x, &
+      \left(\Pi+xx^\top\right)r & = s,
+    \end{align*}
+  we can certainly write
+    \begin{align*}
+      w & = Uc + \beta v, &
+      r & = Ud + \gamma v,
+    \end{align*}
+  for some vectors $c$ and $d$ and scalars $\beta$ and $\gamma$.
+  Then we have
+    \begin{align*}
+      &&\left(U\Lambda U^\top + (Ua+\alpha v)(Ua+\alpha v)^\top\right)
+        \left(Uc+\beta v\right) & = Ua+\alpha v \\
+      &\Leftrightarrow&
+      U\Lambda c + (Ua+\alpha v)(a^\top c+\alpha \beta)
+         & = Ua+\alpha v \\
+      &\Leftrightarrow&
+      \Lambda c + a(a^\top c+\alpha \beta) & = a, \qquad
+      \alpha (a^\top c+\alpha \beta) = \alpha, \\
+      &\Leftrightarrow&
+      c  & = 0, \qquad \beta = 1/\alpha.
+    \end{align*}
+  Similarly,
+    \begin{align*}
+      &&\left(U\Lambda U^\top + (Ua+\alpha v)(Ua+\alpha v)^\top\right)
+        \left(Ud+\gamma v\right) & = Ub \\
+      &\Leftrightarrow&
+      U\Lambda d + (Ua+\alpha v)(a^\top d + \alpha\gamma)
+         & = Ub \\
+      &\Leftrightarrow&
+      \Lambda d + a(a^\top d+\alpha \gamma) & = b, \qquad
+      \alpha (a^\top d+\alpha \gamma) = 0, \\
+      &\Leftrightarrow&
+      d  & = \Lambda^{-1}b, \qquad 
+      \gamma = - a^\top \Lambda^{-1}b/ \alpha
+    \end{align*}
+  Thus,
+    \begin{align*}
+      x^\top\left(\Pi+xx^\top\right)^\dagger x
+        & = x^\top w = \left(Ua+\alpha v\right)^\top (1/\alpha) v 
+        = 1. \\
+      s^\top\left(\Pi+xx^\top\right)^\dagger x
+        & = s^\top w = \left(Ub\right)^\top (1/\alpha) v = 0. \\
+      s^\top\left(\Pi+xx^\top\right)^\dagger s
+        & = s^\top r 
+        = \left(Ub\right)^\top \left(U\Lambda^{-1}b -a^\top
+        \Lambda^{-1}b/ \alpha v\right) 
+        = b^\top \Lambda^{-1}b 
+        = s^\top U\Lambda^{-1}U^\top s
+        = s^\top\Pi^\dagger s.
+    \end{align*}
+  \end{proof}
+  We can also verify these calculations directly using Lemma~\ref{lem:pi.update}, but more intuition can be gleaned from the proof above.
+
+  \section{Missing Proofs}
+  \begin{proof}[Proof of Lemma~\ref{lemma:A.B.infinite.regret}.]
+  It suffices to consider a one dimensional game. Fix some $T$ and
+  consider the simplest data sequence $x_t = b$. Applying the
+  alternative form of $\P_t$ from \eqref{eq:nicePtdef}, we can check
+  that
+  $\sum_{s=1}^t \x_t^\top \P_t \x_s \leq \x_t^\top  \Pi_t^{-1} \sum_{s=1}^t \x_s \leq
+  b$, so the $\mathcal B(\{B_t\})$ conditions
+  hold. Theorem~\ref{thm:fixed.design.regret} implies that the minimax
+  regret is exactly
+  $\sum_{t=1}^T B_t^2 \x_t^\top \P_t \x_t\geq b^2 \sum_{t=1}^T \x_t^\top \P_t
+  \x_t$.
+
+  We can explicitly write out the recursion for $\x_t^\top \P_t\x_t$ in this simple case. The initial value is $\x_T ^2 \P_T = \x_T^2/(\sum_{t=1}^T \x_t^2) = T^{-1}$, and the recursion becomes
+$
+  \x_{t-1}^2 \P_{t-1} = \x_t^2 \P_t + (\x_t^2 \P_t)^2
+$.
+Denoting $z_t = \x_t^2 \P_t$, we see that $z_T = T^{-1}$ and $z_{t-1} = z_t + z_t^2$. This exact recursion was analyzed in \cite[Lemma 3]{MinMaxGaussDens}, which proved that $\sum_{t=1}^T z_t \geq \log (T) - \log\log(T)$, which implies that, for the data sequence $\x_1,\ldots,\x_T = 1$,
+$
+  \Regret \geq b^2( \log (T) - \log\log(T) ).
+$
+Hence, for a given $M$, we can always find a $T$ large enough to make $\Regret > M$. 
+
+The last step is to check that the $\mathcal A(\SSigma)$ condition
+is satisfied. We exploit the fact that $\x_t^\top \P_t \x_t$ is scale
+invariant; it does not change when $\x_t$ is multiplied by any
+invertible matrix, as the $\P_t$ term will be pre and post-multiplied
+by the inverse of this matrix. This result appeared in \citep{minimax.regression}, but we include a proof in Lemma~\ref{lemma:scale_invariance} in the Appendix for completeness.
+
+The scale invariance implies that the data sequence $\x_t' = c \x_t$, for any $c$, has the same regret as if the adversary played $\x_t$ with the same labels. Hence, if the $\P_0$ of $\x_t$ violates the $\SSigma$ condition, then we may choose $c$ large enough such that $c^{-2}\P_0$, which is the $\P_0$ corresponding to $\x_t'$, does not. Since the regret remains the same, and the $\mathcal B$ conditions are also scale invariance, our $\x_t'$ sequence verifies the claim of the lemma.
+\end{proof}
+
+% \begin{proof}
+%   The marginal loss for the comparator of playing another round with covariate $\x = \x_\parallel + \x_\perp$, where $\x_\parallel\in\mathcal R(\Pi_{t-1})$ and $\x_\perp$ is its orthogonal complement, is
+%   \begin{equation*}
+%     \Delta_t^* 
+%     =
+%     y_t^2\left( 1-\x_t^\top \Pi_t^\dagger \x_t\right)
+%       - 2 y_t \s_{t-1}^\top \Pi_t^\dagger \x_t
+%       +\left(\s_{t-1}^\top\Pi_t^\dagger \x_t\right)^2
+%       \frac{\x_t^\top\Pi_{t-1}^\dagger\x_t}
+%       {\x_t^\top\Pi_t^\dagger\x_t}.
+%     \end{equation*}
+%   \end{proof}
+  \begin{proof}[Proof of Lemma~\ref{lemma:delta.calculation}]
+We have
+  \begin{align*}
+    \Delta_t^*
+    &= \sigma_t^2 - \sigma_{t-1}^2 -
+      \left(\s_{t-1} + y_t\x_t\right)^\top
+      \Pi_t^\dagger\left(\s_{t-1} + y_t\x_t\right) 
+      +\s_{t-1}^\top \Pi_{t-1}^\dagger\s_{t-1}\\
+    &=
+      y_t^2
+      -      2\y_t\s_{t-1}
+      \Pi_t^\dagger\x_t
+        -y_t^2\x_t^\top
+      \Pi_t^\dagger\x_t
+          +\s_{t-1}^\top\left(\Pi_{t-1}^\dagger - \Pi_t^\dagger\right)\s_{t-1}.
+  \end{align*}
+First, assume that $\x_\perp = 0$. Then $\x_t$ is in the column space
+of $\Pi_t$ and $\Pi_{t-1}$, and an application of the generalized
+Sherman-Morrison formula (see e.g.\ \cite{harvillematrix}) yields
+  \begin{align}\label{eqn:genSherMor}
+    \Pi_{t-1}^\dagger &= \left(\Pi_t-\x_t\x_t^\top\right)^\dagger 
+                      =\Pi_t^\dagger +
+                        \frac{\Pi_t^\dagger \x_t\x_t^\top \Pi_t^\dagger}
+                        {1-\x_t^\top\Pi_t^\dagger\x_t},
+  \end{align}
+  and so
+  \begin{align*}
+    \Delta_t^*
+    &= y_t^2\left( 1-\x_t^\top \Pi_t^\dagger \x_t\right)
+      - 2 y_t \s_{t-1}^\top \Pi_t^\dagger \x_t
+      +\frac{\left(\s_{t-1}^\top\Pi_t^\dagger \x_t\right)^2}
+      {1-\x_T^\top\Pi_t^\dagger\x_t}.
+  \end{align*}
+Finally, notice that~\eqref{eqn:genSherMor} implies
+  \[
+    \x_t^\top\Pi_{t-1}^\dagger\x_t =
+    \frac{\x_t^\top\Pi_t^\dagger\x_t}{1- \x_t^\top\Pi_t^\dagger\x_t}.
+  \]
+when $\x_\perp = 0$, yielding the claim in that case.
+
+Now, assume that $\x_\perp\neq 0$. Then
+\begin{align*}
+  \lefteqn{ (\s_{t-1}+y_t\x_t)^\top\Pi_t^\dagger(\s_{t-1}+y_t\x_t) }
+  &\\
+ &=\s_{t-1}^\top\Pi_t^\dagger \s_{t-1}
++2y_t\s_{t-1}^\top\Pi_t^\dagger \x_t
++y_t^2\x_t^\top\Pi_t^\dagger \x_t\\
+&=\s_{t-1}^\top\Pi_{t-1}^\dagger \s_{t-1}+y_t^2,
+\end{align*}
+where we applied the three claims of Lemma~\ref{lemma:next.covariances} to obtain the second equality. Therefore, 
+$
+  \Delta_t^* = 0,
+$
+and our formula is correct.
+\end{proof}
+
+% \begin{nonumbertheorem}{\ref{thm:W.value}}
+%   Consider the fixed-design game with early stopping, with
+%   covariates $\x_1^T$. Define the $\P_t$ by the backwards recursion
+%   \eqref{eq:def.P} and define $\gamma_t = \sum_{s=t+1}^T B_s^2
+%   \x_s^\top\P_s\x_s$. Suppose that, for all $t$,
+% \begin{equation}
+%   \label{eq:continuation}
+%   \gamma_t \geq \s_t^\top \left(\Pi_t^\dagger - \P_t\right)\s_t.
+% \end{equation}
+%   Then the instantaneous value-to-go is equal to
+%   \begin{equation}
+%   W_{t}(\s_{t},\sigma_t^2,\Pi_t) = \s_{t}^\top\left(\P_{t} - \Pi_t^\dagger\right) \s_{t}
+%   + \gamma_{t},
+% \end{equation}
+% the adversary causes more regret by continuing the game,
+% and the optimal learner strategy is \eqref{eq:strategy}.
+% \end{nonumbertheorem}
+\begin{proof}[Proof of Theorem~\ref{thm:W.value}]
+  The proof is by induction: assume that 
+  $
+    W\s_{t},\sigma_t^2,t,\Pi_t) = \s_{t}^\top\left(\P_{t}-\Pi_t^\dagger\right)\s_{t}
+    + \gamma_{t}.
+    $
+The base case is easily established with $\gamma_T = 0$ and $\P_T = \Pi_T^\dagger$ yielding the base case of $W(\cdot,\cdot,0,\cdot) = 0$. Now, we assume $W$ is correct at round $t$ and want to verify the formula at $t-1$. Hence, under the usual definitions of $\s_t$ and $\sigma_t^2$, we can calculate
+  \begin{align*}
+    \lefteqn{W(\s_{t-1},\sigma_{t-1}^2,t-1,\x_1^T)} & \\*
+  &=
+  \max_{e_{t}\in\{0,1\}}e_{t}\left( \min_{\hat y_{t}}\max_{y_{t}} (\hat y_{t}-y_{t})^2 
+    - \Delta_{t}^*+W(\s_t,\sigma_t^2,t,\x_1^T)\right)\\
+  &=
+    \bigg(
+    \min_{\hat y}\max_{y} \,
+       (\hat y-y)^2 -
+        y^2\left( 1-\x_{t}^\top \Pi_{t}^\dagger \x_{t}\right)
+      + 2 y \s_{t-1}^\top \Pi_{t}^\dagger \x_{t}
+      -\left(\s_{t-1}^\top\Pi_{t}^\dagger \x_{t}\right)^2
+      \frac{\x_{t}^\top\Pi_{t-1}^\dagger\x_{t}}
+      {\x_{t}^\top\Pi_{t}^\dagger\x_{t}} \\
+  &\quad\quad +  (\s_{t-1}+y \x_{t})^\top\left(\P_{t}-\Pi_t^\dagger\right)(\s_{t-1}+ y\x_{t})
+    + \gamma_{t}\bigg)_+\\
+  &=
+    \bigg(
+    \min_{\hat y}\max_{y} \,
+         \hat y^2 + 2y\left(
+        \s_{t-1}^\top \Pi_{t}^\dagger \x_{t}
+        + \s_{t-1}^\top \left(\P_{t}+\Pi_t^\dagger\right) \x_{t}
+        - \hat y \right)
+        +y^2\x_{t}^\top \Pi_{t}^\dagger \x_{t}\\
+      &\quad\quad-\left(\s_{t-1}^\top\Pi_{t}^\dagger \x_{t}\right)^2
+      \frac{\x_{t}^\top\Pi_{t-1}^\dagger\x_{t}}
+      {\x_{t}^\top\Pi_{t}^\dagger\x_{t}} 
+        +\s_{t-1}^\top\left(\P_t-\Pi_t^\dagger\right)\s_{t-1}
+        +y^2\x_t^\top\left(\P_t-\Pi_t^\dagger\right)\x_t
+    +  \gamma_{t}\bigg)_+\\
+  &=
+    \bigg(
+    \min_{\hat y}\max_{y} 
+     \hat y^2 + 2y\left( \s_{t-1}^\top \P_{t} \x_{t} - \hat y \right)
+    + y^2\x_t^\top\P_t\x_t
+    \\
+  &\quad\quad      -\left(\s_{t-1}^\top\Pi_{t}^\dagger \x_{t}\right)^2
+    \frac{\x_{t}^\top\Pi_{t-1}^\dagger\x_{t}}
+    {\x_{t}^\top\Pi_{t}^\dagger\x_{t}}
+    +\s_{t-1}^\top(\P_t-\Pi_t^\dagger)\s_{t-1}
+    +  \gamma_{t}\bigg)_+.
+  \end{align*}
+The objective is convex in $y$ and therefore the optimum will be on
+the boundary at $\pm B_t$. Thus,
+\begin{align*}
+W(\s_{t-1},\sigma_{t-1}^2,t-1,\x_1^T)
+  &=
+    \bigg(
+    \min_{\hat y}
+     \hat y^2
+    + 2 B_t \left| \s_{t-1}^\top \P_{t} \x_{t} - \hat y \right|
+    - B_t^2\x_t^\top\A_t\x_t
+  \\
+  &\quad\quad      -\left(\s_{t-1}^\top\Pi_{t}^\dagger \x_{t}\right)^2
+    \frac{\x_{t}^\top\Pi_{t-1}^\dagger\x_{t}}
+    {\x_{t}^\top\Pi_{t}^\dagger\x_{t}}
+    +\s_{t-1}^\top(\P_t-\Pi_t^\dagger)\s_{t-1}
+    +  \gamma_{t}\bigg)_+.
+\end{align*}
+This objective is convex in $\hat y$ as well, and hence we can minimize it by setting the subgradient to zero. 
+Under the condition that $\left| \s_{t-1}^\top \B_{t} \x_{t}  \right| \leq B_t$, the subgradient at $\hat y = \s_{t-1}^\top \P_{t} \x_{t}$ contains zero, so
+\begin{align*}
+  \lefteqn{
+W(\s_{t-1},\sigma_{t-1}^2,t-1,\x_1^T)} & \\*
+  &=
+    \bigg( \left(\s_{t-1}^\top \P_t \x_{t}\right)^2
+    + B_t^2\x_t^\top\P_t\x_t
+    -\left(\s_{t-1}^\top\Pi_{t}^\dagger \x_{t}\right)^2
+    \frac{\x_{t}^\top\Pi_{t-1}^\dagger\x_{t}}
+    {\x_{t}^\top\Pi_{t}^\dagger\x_{t}}
+        +\s_{t-1}^\top\left(\P_{t}-\Pi_t^\dagger\right)\s_{t-1}
+    +  \gamma_{t}\bigg)_+.
+\end{align*}
+If $\x_t\in\mathcal R(\Pi_{t-1})$, then we can use a generalized
+Sherman-Morrison lemma (see Lemma~\ref{lem:pi.update} for details)
+to calculate
+$
+    \x_t^\top\Pi_{t-1}^\dagger\x_t =
+    \frac{\x_t^\top\Pi_t^\dagger\x_t}{1- \x_t^\top\Pi_t^\dagger\x_t}
+$,
+and therefore
+\begin{align*}
+  \left(\s_{t-1}^\top\Pi_{t}^\dagger \x_{t}\right)^2
+    \frac{\x_{t}^\top\Pi_{t-1}^\dagger\x_{t}}
+    {\x_{t}^\top\Pi_{t}^\dagger\x_{t}}
+  +\s_{t-1}^\top\Pi_t^\dagger\s_{t-1}
+  &=  \s_{t-1}^\top\left(\Pi_{t}^\dagger \x_t\x_t^\top \Pi_{t}^\dagger    \frac{1}{1-\x_{t}^\top\Pi_t^\dagger\x_{t}} + \Pi_{t}^\dagger\right)\s_{t-1}\\
+  &=\s_{t-1}\Pi_{t-1}^\dagger\s_{t-1}.
+\end{align*}
+If instead $\x_t\not\in\mathcal R(\Pi_{t-1})$, then a standard fact for the ordinary least squares solution is $\s_{t-1}^\top\Pi_{t}^\dagger \x_{t} = 0$ and $\s_{t-1}^\top\Pi_{t}^\dagger \s_{t-1} = \s_{t-1}^\top\Pi_{t-1}^\dagger \s_{t-1}$ (a proof of this fact is provided in  Lemma~\ref{lemma:next.covariances}). In either case, we have 
+\begin{align*}
+W(\s_{t-1},\sigma_{t-1}^2,t-1,\x_1^T)
+  &=
+    \left( \s_{t-1}^\top\left( \P_t + \P_{t} \x_{t}\x_t^\top\P_t\right)\s_{t-1}
+    + B_t^2\x_t^\top\P_t\x_t
+    -\s_{t-1}^\top\Pi_{t-1}^\dagger\s_{t-1}
+    +  \gamma_{t}\right)_+ \\
+  &=
+    \left( \s_{t-1}^\top\left(\P_{t-1}
+    -\Pi_{t-1}^\dagger\right)\s_{t-1}
+    +  \gamma_{t-1}\right)_+,
+\end{align*}
+verifying the $\P_t$ and $\gamma_t$ recurrence. If $\gamma_{t-1}\geq\s_{t-1}^\top\left(\Pi_{t-1}^\dagger- \P_{t-1} \right)\s_{t-1}$ holds for all $t$, then the instantaneous value-to-go is always positive, an optimal adversary will always continue, and the data sequence seen by the learner is $\x_1^T \in\overline{\mathcal A}(\P_0)$. In this case, the minimax strategy is confirmed to be \eqref{eq:strategy} by Theorem~\ref{thm:forward.minimax}.
+\end{proof}
+
+\begin{proof}[Proof of Lemma~\ref{lem:optimal.covariate.existence}]
+  It actually suffices to take the simplest of sequences, $\x_t = \e_1$. For any fixed $T$,
+   $\P_T = \frac{1}{T} \e_1\e_1^\top$, where all the $\P_t$ for the
+   remainder of the proof are with respect to the covariate sequence
+   of $T$ copies of $\e_1$. In this case, the $\P_t$ matrices are all
+   zero except for the first element which evolves like $\P_{t-1} =
+   \P_t + \P_t^2$. This is the same recursion studied by
+   \cite{MinMaxGaussDens}, who proved a lower bound
+   of $(t + \log(T+1) - \log(t+1))^{-1}$. Thus, we can bound
+   \begin{align*}
+     \sum_{t=1}^T B_t^2 \x_t^\top\P_t\x_t
+     &\geq
+       \sum_{t=1}^T \frac{B_t^2}{t + \log(T+1) - \log(t+1)}
+     \geq
+       \sum_{t=1}^T \frac{B_t^2}{t + \log(T+1)},
+   \end{align*}
+   and thus the assumption that  $ \sum_{t=1}^T  \frac{B_t^2}{t + \log(T+1)} \geq \gamma_0$ implies that there
+   is an $\x_1^T$ sequence that produces an upper bound on $\gamma_0$.
+
+   Next, notice that if we choose any index $t'$ with $B_{t'} \leq
+   \norm{B_t}_\infty$, then the covariate sequence $\x_t = e_1\{ t =
+   t'\}$, where $\{\cdot\}$ is the indicator function,  produces
+   $\sum_{t=1}^T B_t^2 \x_t^\top\P_t\x_t = B_{t'}^2 \leq  \gamma_0$. Now,
+   $\sum_{t=1}^T B_t^2 \x_t^\top\P_t\x_t \leq \gamma_0$ is a
+   continuous function of $\x_1^T$, and hence, by the intermediate
+   value theorem, there is a $\x_1^T$ with $\sum_{t=1}^T B_t^2
+   \x_t^\top\P_t\x_t = \gamma_0$.
+
+   
+ Next, we check the $\mathcal B$ constraint. First, observe that it suffices to check that we can construct some $\x_1^T$ using the construction of the previous paragraph. On $[0,1/2]$, $x/(1+x) \geq x/2$ and the $\P_t$ sequence is decreasing, so
+   $\sum_{s=t+1}^T \x_s^2\frac{\x_s^2\P_s}{1 + \x_s^2 \P_s}
+   \geq   
+  \frac{1}{2}x \sum_{s=t+1}^T \x_s^4 \P_{s}
+   $, and combined with \eqref{eq:nicePtdef}, we have
+   \begin{align*}
+     \sum_{s=1}^t \abs{\x_t^\top\P_s\x_s}
+     &\leq
+       \abs{\x_t}\frac{\sum_{s=1}^t \abs{\x_s}}{\Pi_t +  \sum_{s=t+1}^T \x_s^2\frac{\x_s^2\P_s}{1 + \x_s^2 \P_s} }
+     \leq
+    \abs{\x_t}\frac{\sum_{s=1}^t \abs{\x_s}}{\Pi_t +  \sum_{s=t+1}^T \x_s^2\frac{\x_s^2\P_s}{2} }.
+   \end{align*}
+   The arguments from the previous section show that $\sum_{s=t+1}^T \x_s^2\frac{\x_s^2\P_s}{2}$ can be made to grow without bound (in particular, by taking $\x_s = \e_1$), and so we can always find a long enough covariate sequence such that the $\mathcal B$ constraint is met.
+
+    % \begin{minipage}{\textwidth}
+    % \end{minipage}
+   
+
+   Now, fix any $\x_1^T$ sequence that achieves the $\mathcal B$
+      and $\mathcal C$ constraints.  By
+      Lemma~\ref{lemma:scale_invariance}, we can, for any invertible
+      matrix $\A$, rescale the covariate sequence to form $\x_t' = \A
+      \x_t$ to obtain the corresponding $\P_t' = \W^{-1}\P_t\W^{-1}$.
+      Since we have $\x_s^\top\P_t\x_t = \x_s'^\top\P_t'\x_t'$ for any
+      $s$ and $t$, the $\mathcal B$ and $\mathcal C$ constraints hold
+      automatically. Therefore, we are free to choose $\A$ such that
+      $\P_0' = \SSigma$, and therefore
+      ${\x_1^T}'\in\mathcal{ABC}(\SSigma,\gamma_0)$.
+
+  \end{proof}
+
+\begin{proof}[Proof of Lemma~\ref{lemma:FTRL}.]
+  Since $\theta$ minimizes a convex unconstrained objective, we set the
+  derivative to zero and obtain the solution $\theta^* =
+  \left(\sum_{s=1}^{t-1}\x_s\x_s^\top+\R_t\right)^{-1}\s_{t-1}$. Thus,
+  we need to verify that
+  $\sum_{s=1}^{t-1}\x_s\x_s^\top+\R_t=\P_t^{-1}$ for all $t$. This
+  also guarantees that $\R_t\succeq 0$. The $t=0$ case is by definition of $R_0$. Now, proceeding by induction, assume that the statement holds for $t-1$. Then,
+  \begin{align*}
+    \sum_{s=1}^{t-1}\x_s\x_s^\top+\R_{t} &= \sum_{s=1}^{t-1}\x_s\x_s^\top+\R_{t-1} + \frac{\x_t\x_t^\top}{1+\x_t^\top\P_t\x_t}-\x_{t-1}\x_{t-1}^\top\\
+                                         &= \sum_{s=1}^{t-2}\x_s\x_s^\top+\R_{t-1} + \frac{\x_t\x_t^\top}{1+\x_t^\top\P_t\x_t}
+                                           = \P_{t-1}^{-1} + \frac{\x_t\x_t^\top}{1+\x_t^\top\P_t\x_t}
+    =\P_t^{-1},
+  \end{align*}
+where the last equality is by Sherman-Morrison.
+\end{proof}
+
+
+\section{Auxiliary Lemmas and Theorems}
+\label{sec:appendix.proofs}
+
+% \begin{nonumberlemma}{\ref{lemma:AisP}}
+% For any fixed covariate sequence $\x_1,\ldots,\x_T$,
+% define
+%   \[
+%     \SSigma = \sum_{s=1}^T \frac{\x_s^\top\P_s\x_s}{1+
+% \x_s^\top\P_s\x_s}\x_s \x_s^\top.
+%   \]
+% Then the forward matrices $\P_t$ defined by \eqref{eq:forward.recursion}
+% are identical to the $\P_t$ matrices defined by the backwards recursion \eqref{eq:def.P}.
+% \end{nonumberlemma}
+
+  \begin{nonumberlemma}{\ref{lemma:P.consistency}}
+  For any $t\geq 0$, $\x_1,\ldots, \x_t$, and symmetric matrix
+  $\P\succeq 0$, the following two conditions are equivalent:
+\begin{enumerate}
+  \item\label{cond:psd}
+    $ \P^\dagger \succeq \Pi_t$
+  \item\label{cond:prec}
+    For any $T\ge t+k$, where
+    $k=\mathrm{rank}\left(\P^\dagger - \Pi_t \right)$,
+    there is a continuation of the covariate sequence,
+    $\x_{t+1},\ldots,\x_T$, such that setting $\P_t=\P$ and defining
+    $\P_{t+1},\ldots,\P_T$ by the forward recursion \eqref{eq:forward.recursion} gives
+    $
+      \P_T^\dagger = \Pi_T
+    $.
+  \end{enumerate}
+\end{nonumberlemma}
+  \begin{proof}
+  To see that Condition~\ref{cond:psd} implies
+  Condition~\ref{cond:prec},
+  we will consider the forward algorithm recursion, starting from
+  $\P_t=\P$, and show that we can find suitable covariate vectors
+  $\x_{t+1},\ldots,\x_{t+k}$, so that
+    \[
+      \mathrm{rank}\left(\P_{t+i}^\dagger - \sum_{s=1}^{t+i}
+        \x_s\x_s^\top\right) = k-i,
+    \]
+  which implies the result for $T=t+k$. It suffices to show that, at
+  each step, we can reduce this rank by one.
+  Consider the spectral decomposition
+    \[
+      \P^\dagger - \Pi_t = \sum_{i=1}^m\lambda_i
+      \v_i\v_i^\top,
+    \]
+  for orthonormal $v_1,\ldots,v_k$ and non-negative
+  $\lambda_1\ge\cdots\ge\lambda_k>0$. Choosing
+  $\x_{t+1}=\beta\v_k$, there is a $\beta\ge 0$
+  such that
+    \[
+      \P_{t+1}^\dagger - \Pi_{t-1} = 
+        \sum_{i=1}^{k-1}\lambda_i \v_i\v_i^\top,
+    \]
+  which implies the result.  Indeed, we have
+    \begin{align*}
+      \P_{t+1}^\dagger - \Pi_{t+1}
+        & = \P_t^\dagger + \frac{a_{t+1}\beta^2}{(1-a_{t+1})b_{t+1}^2} \v_k\v_k^\top
+        - \Pi_t - \beta^2\v_{t+1}\v_{t+1}^\top \\
+        & = \sum_{i=1}^{k-1}\lambda_i \v_i\v_i^\top
+          + \left(\lambda_k - \beta^2 +
+          \frac{a_{t+1}\beta^2}{(1-a_{t+1})b_{t+1}^2}\right) \v_k\v_k^\top.
+    \end{align*}
+  Recall
+    \begin{align*}
+      b_{t+1}^2
+        & =\x_{t+1}^\top\P_t\x_{t+1} \\
+        & =\beta^2\v_k^\top\left(
+          \Pi_t + \sum_{i=1}^k\lambda_i
+          \v_i\v_i^\top \right)^\dagger\v_k \\
+        & =\beta^2c^2,
+    \end{align*}
+  where we have defined $c^2>0$.
+  We need to choose $\beta\ge 0$ so that
+    \begin{align*}
+      &&\lambda_k &
+        = \beta^2\left(1-\frac{a_{t+1}}{(1-a_{t+1})b_{t+1}^2}\right) \\
+        &&& = \beta^2\left(1-\frac{\sqrt{4b_t^2+1}-1}{2b_t^2}\right) \\
+        &&& = \beta^2\left(1-\frac{\sqrt{4\beta^2c^2+1}-1}
+            {2\beta^2c^2}\right)\\
+      &\Leftrightarrow&
+        c^2\lambda_k & = \beta^2c^2-\frac{\sqrt{4\beta^2c^2+1}-1}{2}.
+    \end{align*}
+  Since $c^2\lambda_k\ge 0$ and the function on the right hand side
+  maps to $[0,\infty)$ for $\beta\ge 0$, there is a suitable choice
+  of $\beta$.
+  To see that this implies the result for any $T\ge t+k$, notice that
+  by choosing a smaller value of $\beta$, the rank is not diminished.
+
+  To see the other direction, notice that Condition~\ref{cond:prec}
+  and Lemma~\ref{lemma:AisP} together imply that there is a $T$ and a
+  completion of the sequence, $\x_1,\ldots,\x_T$, so that plugging the
+  sequence into the backwards recurrence~\eqref{eq:def.P} gives
+  $\P_t=\P$. But then Equation~\eqref{eq:nicePtdef} shows that
+    \[
+      \P_t^\dagger= \Pi_t
+            + \sum_{s=t+1}^T\frac{\x_s^\top \P_s \x_s}
+            {1+\x_s^\top \P_s \x_s} \x_s \x_s^\top
+      \succeq \Pi_t,
+    \]
+  which is Condition~\ref{cond:psd}.
+\end{proof}
+
+
+\begin{lemma}
+  \label{lem:R.without.P}
+The definition of $\R_t$ in Equation~\eqref{eq:def.R} is equivalent to defining $\R_0=\P_0^{-1}$ and
+\begin{equation}
+  \R_t = \R_{t-1}
+  + \frac{2\x_t\x_t^\top}{\sqrt{1+4\x_t^\top\left(\R_{t-1}+\sum_{s=1}^{t-2}\x_s\x_s^\top\right)^{-1}\x_t}+1}-\x_{t-1}\x_{t-1}^\top.
+\end{equation}
+\end{lemma}
+\begin{proof}
+First, we can calculate
+ \begin{equation}
+4b_t^2 = \left(\frac{2}{1-a_t}-1\right)^2-1
+= \left(\frac{1+a_t}{1-a_t}\right)^2-1
+= \frac{4a_t}{(1-a_t)^2},
+\end{equation}
+  which implies that $b_t^2 = \frac{a_t}{(1-a_t)^2}$.
+Using the forward recursion \ref{eq:def.P} of  $\P_t$, we have 
+\[
+  \x_t^\top\P_t\x_t = b_t^2 - a_t b_t^2 = \frac{a_t}{1-a_t},
+\]
+and 
+\begin{equation*}
+\frac{1}{1+ \x_t^\top\P_t\x_t} = 1-a_t = \frac{2}{\sqrt{1+4b_t^2}+1},
+\end{equation*}
+which, when combined $b_t^2 = \x_t^\top\left(\R_{t-1}+\sum_{s=1}^{t-2}\x_s\x_s^\top\right)^{-1}\x_t$, yields the desired statement.
+\end{proof}
+
+
+\section{The Proof of the Regret Bound}
+\label{sec:regret.bound.proof}
+This section proves Theorem~\ref{thm:regret.bound}, which is quoted below for convenience.
+\begin{nonumbertheorem}{\ref{thm:regret.bound}}
+For any fixed $T$ and $B_1^T$, we can bound the minimax regret of the
+box-constrained game by
+    \begin{equation*}
+\sup_{\x_1^T\in\overline{\mathcal A}(\SSigma)}\sup_{y_1^T\in\mathcal L(B_1^T)}R_T(s^*,\x_1^T,y_1^T)
+  \leq
+  \frac{d\|B_1^T\|_\infty}{\|\SSigma\|_2}\left(
+  1 + 2 \ln \left(1 +
+  \frac{||\SSigma||_2^2}{2\|B_1^T\|_\infty^2}
+  ||B_1^T||_2^2
+  \right)\right).
+    \end{equation*}
+  \end{nonumbertheorem}
+
+The minimax analysis shows that the minimax regret is equal to 
+$
+    \sup_{\x_1^T\in\mathcal A(\SSigma)}
+    \sum_t B_t^2\x_t^\top\P_t\x_t
+$,
+which we bound by defining the worst case regret function,
+\begin{align*}
+  \phi_t(\SSigma,B_1^t) &= \max_{\x_1,\ldots,\x_{t}}\Bigg\{
+  \sum_{s=1}^t B_s^2 \x_s^\top\P_s(\x_1,\ldots,\x_s)\x_s:
+  \SSigma\succeq \P_t(\x_1,\ldots,\x_t) \sum_{s=1}^{t} \x_s\x_s^\top
+  \Bigg\}.
+\end{align*}
+We drop the explicit dependence of $\P_t$ on $\x_1^T$ and reparameterize by
+$\r_t^2 = \P_t\x_t\x_t^\top$: 
+\begin{align*}
+  \phi_t(\SSigma,B_1^t)
+ &= \max_{\r_1,\ldots,\r_{t}}\Bigg\{
+  \sum_{s=1}^t B_s^2\tr(\r_t^2):
+  \SSigma\succeq \P_t\sum_{s=1}^{t}\P_s^{-1}\r_s^2
+  \Bigg\}.
+\end{align*}
+We then relax the optimization to allow $\r_t$ to be a general matrix and argue that the worst case regret function is upper bounded by $d$ 1-dimensional functions. 
+
+Noting that $\P_{t-1}\P_t^{-1} = \I+\P_t\x_t\x_t^\top=\I+\r_t^2$, we can derive an induction for $\phi_t$:
+\begin{align*}
+   \phi_t(\SSigma,B_1^t)
+  &=\max_{\x_1,\ldots,\x_{t}} B_t^2 \x_t^\top\P_t\x_t+
+    \Bigg\{
+    \sum_{s=1}^{t-1} B_s^2 \x_s^\top\P_s\x_s:
+    \SSigma - \P_t\x_t\x_t^\top \succeq \P_t \sum_{s=1}^{t-1} \x_s\x_s^\top
+    \Bigg\}\\
+  &=\max_{\x_1,\ldots,\x_{t}} B_t^2 \x_t^\top\P_t\x_t+
+    \Bigg\{
+    \sum_{s=1}^{t-1} B_s^2 \x_s^\top\P_s\x_s:
+    (\SSigma - \P_t\x_t\x_t^\top)\P_{t-1}\P_t^{-1} \succeq \P_{t-1} \sum_{s=1}^{t-1} \x_s\x_s^\top
+    \Bigg\}\\
+  % &=\max_{\x_1,\ldots,\x_{t}} B_t^2 \tr(\P_t\x_t\x_t^\top)+
+  %   \Bigg\{
+  %   \sum_{s=1}^{t-1} B_s^2 \tr(\P_s\x_s\x_s^\top):
+  %   (\SSigma - \P_t\x_t\x_t^\top)(\I + \P_t\x_t\x_t^\top) \succeq \P_{t-1} \sum_{s=1}^{t-1} \x_s\x_s^\top
+  %   \Bigg\}\\
+  &=\max_{\r_t,\ldots,\r_{t}} B_t^2 \tr(\r_t^2)+
+    \Bigg\{
+    \sum_{s=1}^{t-1} B_s^2 \tr(\r_s^2):
+    (\SSigma - \r_t^2)(\I + \r_s^2) \succeq \P_{t-1} \sum_{s=1}^{t-1} \x_s\x_s^\top
+    \Bigg\}\\
+  &=\max_{\r_t} B_t^2 \tr(\r_t^2)+
+    \phi_{t-1}\left(
+    (\SSigma - \r_t^2)(\I + \r_s^2), B_1^{t-1}\right).
+\end{align*}
+
+As a first step, we will bound $\phi_t$ in one dimension where
+$\phi_t(\Sigma,B_1^t)=\max_{r_t}
+B_t^2 r_t^2+\phi_{t-1}((\Sigma-r_t^2)(1+r_t^2),B_1^{t-1})$. We have
+omitted the bolding to emphasize that we are in the scalar case. The
+following lemma borrows heavily from \citep[Theorem
+5]{minimax.regression}; the proof is in
+\begin{lemma}
+\label{thm:1D.regret}
+For every $T$ and every $B_1^T$ with $||B_1^T||_\infty\leq \Sigma$, 
+\begin{equation*}
+  \phi_T(\Sigma,B_1^T)\leq
+  \min\left\{-\ln(1-\Sigma),1+2\log\left(1+\frac{||B_1^T||_2^2}{2}\right)\right\}.
+\end{equation*}
+\end{lemma}
+\begin{proof}
+In fact, we will prove the slightly stronger statement: for any positive function $f(T)$  with $f(0)\geq 0$ and 
+$B_{T+1}^2e^{-f(T)/2}+f(T)\leq f(T+1)$, we have 
+\begin{equation*}
+  \phi_T(\Sigma,B_1^T)\leq \min\{-\ln(1-\Sigma),f(T)\}.
+\end{equation*}
+We prove this by induction on $T$. The base case is trivial. Assume that the induction hypothesis holds for $T$. Then,
+\begin{align*}
+  \phi_{T+1}(\Sigma,B_1^T) =& \max_{r_{T+1}^2}B_{T+1}^2r_{T+1}^2+\phi_{T}\left((\Sigma-r_t^2)(1+r_t^2),B_1^{T}\right)\\
+  =& \max_{0\leq x\leq\Sigma}B_{T+1}^2\frac{\sqrt{(1+\Sigma)^2-4x}-(1-\Sigma)}{2}+\phi_T(x,B_1^{T-1})\\
+  \leq& \max_{0\leq x\leq\Sigma}B_{T+1}^2\frac{\sqrt{(1+\Sigma)^2-4x}-(1-\Sigma)}{2}+ \min\{-\ln(1-x),f(T)\}.
+\end{align*}
+Define $\hat x = 1-\exp(-f(T))$, which is where the minimum switches from the first to the second argument. To find the maximizing $x$, we will calculate when the derivative is positive:
+\begin{align}
+  &\frac{-B_{T+1}^2}{\sqrt{(1+\Sigma)^2-4x}}+\frac{1}{1-x}\geq 0\notag \\
+  \Leftrightarrow& (1+\Sigma)^2-4x-B_{T+1}^4(1-x)^2\geq 0\notag \\
+  \Leftrightarrow& (1+\Sigma)^2-B_{T+1}^4(1+x)^2+4(B_{T+1}^4-1)x\geq 0,\label{eqn:B_constraint}
+\end{align}
+which is true for all $x\leq\Sigma$ and $B^4\leq\Sigma.$ In fact, $B_{T+1}^4$ may be bigger than $\Sigma$ without violating the constraint, but in particular $B_t\leq \Sigma$ is enough. 
+
+The sign of the derivative changes at $\hat x$. If $\Sigma\leq \hat x$, then the maximum is at $\Sigma$ and we have
+\begin{align*}
+  \phi_{T+1}(\Sigma,B_1^T)
+  \leq& B_{T+1}^2\frac{\sqrt{(1+\Sigma)^2-4\Sigma}-(1-\Sigma)}{2}+\phi_T(\Sigma)\\
+  =& \phi_T(\Sigma).
+\end{align*}
+Otherwise, if $\hat x\leq \Sigma$, the maximum is at $\hat x$ and we have
+\begin{align*}
+  \phi_{T+1}(\Sigma,B_1^T)
+  \leq& B_{T+1}^2\frac{\sqrt{(1+\Sigma)^2-4\hat x}-(1-\Sigma)}{2}+f(T)\\
+  \leq& B_{T+1}^2\sqrt{1-\hat x} + f(T)\\
+  =& B_{T+1}^2\exp(-f(T)/2) + f(T)
+\end{align*}
+where the second line was from using $\Sigma\leq1$. This allows any  $f(T)$ that satisfies
+\[
+B_{T+1}^2e^{-f(T)/2}+f(T)\leq f(T+1).
+\]
+To check that  $f(T)=1+2\log(1+1/2\sum_t B_t^2)$ indeed works, we calculate:
+\begin{align*}
+  f(T+1)-f(T) 
+  ~=~ & -2\log\left(\frac{2+\sum_{t=1}^{T}B_t^2} {2+\sum_{t=1}^{T+1}B_t^2} \right)\\
+  ~=~ & -2\log\left(1-\frac{B_{T+1}^2} {2+\sum_{t=1}^{T+1}B_t^2} \right)\\
+  ~\geq~&  \frac{B_{T+1}^2} {1+\frac12 \sum_{t=1}^{T+1}B_t^2}\\
+  ~\geq~& e^{-1/2}\frac{B_{T+1}^2}{1+\frac12 \sum_{t=1}^{T+1}B_t^2}\\
+  ~=~& B_{T+1}^2e^{-f(T)/2}.
+\end{align*}
+\end{proof}
+
+% We now return to the multidimensional case. We bound $\phi_t(\SSigma,B_1^T)$ by bounding the relaxation 
+% \begin{equation}
+% \psi_t(\SSigma,B_1^t)
+% = \max_{\R_1,\ldots,\R_{t}}\Bigg\{
+%   \sum_{s=1}^t B_s^2\tr(\R_t):
+%   \SSigma\succeq \P_t\sum_{s=1}^{t}\P_s^{-1}\R_s
+%   \Bigg\},
+% \end{equation}
+% Which drops the constraint that $\r_t^2$ is the product of $\P_t$ with the rank-one update $\x_t\x_t^\top$.
+
+The general multidimensional case can be bounded by first relaying the assumption that $\r_t^2 = \P_t\x_t\x_t^\top$ to allow general matrices $\R_t$, which only increases the value of the maximization. We can then apply the one-dimensional bound in every direction:
+\begin{lemma}
+\label{lemma:1D.to.many}
+For any $\Sigma \ge 0$, $\psi_t(\Sigma\I,B_1^t) = \sum_{i=1}^d \phi_{t}(\Sigma,B_1^t)$,
+where $\phi_t(\Sigma)$ is the one-dimensional regret bound.
+\end{lemma}
+\begin{proof}
+The base case is trivial since both sides are zero. For the inductive hypothesis, assume that $\psi_{t-1}(\Sigma\I,B_1^{t-1}) = \sum_{i=1}^d \phi_{t-1}(\Sigma,B_1^{t-1})$. Denoting the eigenvalues of $\R$ by $\lambda_1, \ldots, \lambda_d$, we have 
+\begin{align*}
+  \psi_{t}(\Sigma\I,B_1^t)
+  &~=~
+  \max_{\R} B_t^2\tr(\R) + \psi_{t-1}\left((\Sigma\I-\R)(\I+\R),B_1^{t-1}\right)\\
+  &~=~
+  \max_{\R}\left\{\sum_{i=1}^d \lambda_i + \sum_{i=1}^d \phi_{t-1}\left((1+\lambda_i)(\Sigma-\lambda_i),B_1^{t-1}\right)\right\} %
+  ~=~ 
+  \sum_{i=1}^d \phi_{t}(\Sigma,B_1^t).
+\end{align*}
+\end{proof}
+
+\begin{proof}[Proof of Theorem~\ref{thm:regret.bound}]
+Recall from Theorem~\ref{thm:fixed.design.regret} that for given $T$
+and $\x_1,\ldots,\x_T$, the regret of the box constrained game is
+precisely $\sum_{t=1}^T B_t^2\x_t^\top\P_t\x_t$.
+Lemma~\ref{lemma:1D.to.many} bounds $\sum_{t=1}^T
+B_t^2\x_t^\top\P_t\x_t$ by a quantity that does not depend on $\x_t$.
+To invoke Lemma~\ref{thm:1D.regret}, we need that
+$B_t\leq\max_i\lambda_i$ for all $t$, which is exactly
+$||B_1^T||_\infty\leq ||\SSigma||_2$. Rescaling the $B_t$ sequence
+(and hence the regret bound) gives the result.
+\end{proof}
+
+\iffalse
+Theorem~\ref{thm:regret.bound} has two noteworthy implications. As
+long as $B_t$ is smaller that the largest eigenvalue of $\SSigma$, the
+regret does not depend on the $\SSigma$; the minimax algorithm
+automatically adjusts for the scale of the covariates. Also, if
+$B_1^\infty$ is square summable, then the regret is bounded for all
+$T$.
+\fi
+
+
+
+
+\section{Explicit Constraints on $\x_t$}\label{appendixA}
+We have seen that the learner is minimax as long as the adversary plays a covariate sequence that is in $\mathcal A(\SSigma)$. The following theorem provides explicit constraints on the choice of $\x_{t+1}$ as a function of the past covariates.
+\begin{theorem}
+  \label{thm:future.xt}
+  The consistency condition
+  \[
+    \P_{t+1}^{-1} - \sum_{q=1}^{t+1} \x_q\x_q^\top \succeq 0
+  \]
+  is equivalent to the conjunction of
+  \begin{enumerate}
+  \item\label{thm:cond1}
+  $ \P_{t}^{-1} - \sum_{q=1}^{t} \x_q\x_q^\top \succeq 0$,
+  \item\label{thm:cond3}
+  $\x_{t+1}$ is orthogonal to the kernel of
+    $\P_t^{-1} - \sum_{q=1}^t \x_q\x_q^\top$, and
+  \item\label{thm:cond2}
+  $ \x_{t+1}^\top\P_t\x_{t+1}
+      \le d_t(\hat \x_{t+1}) + \sqrt{d_t(\hat \x_{t+1})}$,
+  \end{enumerate}
+  where $\hat \x_{t+1} = \x_{t+1}/\|\x_{t+1}\|$ and
+  \[
+    d_t(\hat \x) = \frac{\hat\x^\top\P_t\hat x}
+        {\hat\x^\top
+\left(\P_t^{-1} - \sum_{q=1}^t
+        \x_q\x_q^\top\right)^\dagger
+% \left(
+%         \P_t + \P_t\left[\left(\sum_{q=1}^t\x_q\x_q^\top\right)^{-1}
+%         -\P_t \right]^\dagger \P_t\right)
+    \hat\x}.
+  \]
+\end{theorem}
+
+Notice that $0\le d_t(\hat\x)\le 1$.
+
+\begin{proof}
+The $\x_{t+1}$ must satisfy
+  \[
+    \P_t^{-1} - \sum_{q=1}^t \x_q\x_q^\top
+      - \left(1-\frac{a_t}{(1-a_t)b_t^2}\right) \x_{t+1}\x_{t+1}^\top
+      \succeq 0.
+  \]
+Since
+  \[
+    1-\frac{a_t}{(1-a_t)b_t^2} \ge 0,
+  \]
+the Schur complement characterization of symmetric positive semidefinite
+matrices shows that this is equivalent to the conjunction of
+\begin{enumerate}
+    \item\label{Schurcond:1} $\P_t^{-1} - \sum_{q=1}^t \x_q\x_q^\top\succeq 0$,
+    \item\label{Schurcond:2} $\x_{t+1}$ orthogonal to the kernel of
+    $\P_t^{-1} - \sum_{q=1}^t \x_q\x_q^\top$, and
+    \item\label{Schurcond:3} $\left(1-\frac{a_t}{(1-a_t)b_t^2}\right)
+        \x_{t+1}^\top\left(\P_t^{-1} - \sum_{q=1}^t
+        \x_q\x_q^\top\right)^\dagger\x_{t+1} \le 1$.
+  \end{enumerate}
+Conditions~(\ref{Schurcond:1}) and~(\ref{Schurcond:2}) are~(\ref{thm:cond1})
+and~(\ref{thm:cond3}).
+
+% Commented out until we can pseudoinvert  \left(\sum_{q=1}^t \x_q\x_q^\top\right)^{-1}
+% For Condition~(\ref{Schurcond:3}), the Woodbury formula gives
+%   \[
+%     \left(\P_t^{-1} - \sum_{q=1}^t \x_q\x_q^\top\right)^{-1}
+%         = \P_t + \P_t\left[\left(\sum_{q=1}^t\x_q\x_q^\top\right)^{-1} -
+%           \P_t \right]^{-1}\P_t.
+%   \]
+Writing $\x_{t+1}=c\hat\x_{t+1}$, we see that
+  \[
+    b_t^2
+    = \x_{t+1}^\top\P_t\x_{t+1}
+    = c^2 \hat\x_{t+1}^\top\P_t\hat\x_{t+1},
+  \]
+so Condition~(\ref{Schurcond:3}) is equivalent to
+  \begin{align*}
+    &&
+    \left(1-\frac{a_t}{(1-a_t)b_t^2}\right) c^2
+      & \le \frac{1}{\hat\x_{t+1}^\top\left(\P_t^{-1} - \sum_{q=1}^t
+        \x_q\x_q^\top\right)^\dagger\hat\x_{t+1}} \\
+    &\Leftrightarrow&
+    \left(1-\frac{a_t}{(1-a_t)b_t^2}\right) b_t^2
+      & \le \frac{\hat\x_{t+1}^\top\P_t\hat\x_{t+1}}
+        {\hat\x_{t+1}^\top\left(\P_t^{-1} - \sum_{q=1}^t
+        \x_q\x_q^\top\right)^\dagger\hat\x_{t+1}} \\
+    &\Leftrightarrow&
+    \left(1-\frac{a_t}{(1-a_t)b_t^2}\right) b_t^2
+      & \le d_t(\hat\x_{t+1}).
+  \end{align*}
+Finally, it is straightforward to check that the function $\phi$ defined by
+  \[
+    \phi(b_t^2):=
+        \left(1-\frac{a_t}{(1-a_t)b_t^2}\right) b_t^2
+  \]
+satisfies
+  \[
+    \phi(b_t^2)= b_t^2 - \frac{\sqrt{4b_t^2+1}-1}{2},
+  \]
+and that $\phi(b_t^2) \le \alpha$ iff $b_t^2\le \alpha+\sqrt{\alpha}$.
+Combining shows that Condition~(\ref{Schurcond:3}) is equivalent to
+Condition~(\ref{thm:cond2}).
+\end{proof}
+
+
+\section{Calculating the Minimax Directly}
+\label{sec:calculating.full.minimax}
+As a step in justifying our $\mathcal{ABC}$ assumptions we show that trying to directly calculate the full minimax game is hopeless.
+\begin{lemma}
+  If we impose the box constraints $|\x_T \P_T s_{T-1}|\leq B_T$ on $\x_T$, the first step of the backwards induction evaluates to
+\begin{align*}
+  &\lefteqn{\max_{\x_T}\min_{\hat y_T}\max_{y_T} \s_T^\top \P_T \s_T - \sigma_T^2}\\
+  &= \s_{T-1}^\top \Pi_{T-1}^\dagger \s_{T-1} - \sigma_{T-1}^2\\
+  &+\begin{cases}
+        \alpha_T^*
+    \frac{ \s_{T-1}^\top \Pi_{T-1}^\dagger \s_{T-1}+
+    \left(\s_{T-1}^\top \Pi_{T-1}^\dagger \s_{T-1}+B_T^2\alpha_T^*\right)
+    \left(1- (\alpha_T^*)^2\s_{T-1}^\top \Pi_{T-1}^\dagger \s_{T-1}\right)}
+  {\left(1-(\alpha_T^*)^2 \s_{T-1}^\top \Pi_{T-1}^\dagger \s_{T-1}\right)^2}&
+  \text{ if $\Pi_{T-1}$ is full rank}\\
+  \max\left\{ B_T^2,
+          \alpha_T^*
+    \frac{ \s_{T-1}^\top \Pi_{T-1}^\dagger \s_{T-1}+
+    \left(\s_{T-1}^\top \Pi_{T-1}^\dagger \s_{T-1}+B_T^2\alpha_T^*\right)
+    \left(1- (\alpha_T^*)^2\s_{T-1}^\top \Pi_{T-1}^\dagger \s_{T-1}\right)}
+  {\left(1-(\alpha_T^*)^2 \s_{T-1}^\top \Pi_{T-1}^\dagger \s_{T-1}\right)^2}
+\right\}&
+\text{ otherwise.}
+  \end{cases}
+\end{align*}
+\end{lemma}
+This lemma makes the point that the full minimax formulation leads to an intractable backwards induction, even from the first step.
+\begin{proof}
+We prove this lemma by direct calculation. For a given $\x_T$, we have already evaluated the $\min_{\hat y_T}\max_{y_T}$ argument using the backwards induction under the condition that $|\x_T^\top \P_T \s_{T-1}| \leq B_T$. Hence, the above quantity is equal to 
+\begin{equation}\label{eqn:full.minimax.1}
+  \max_{\x_T} \s_{T-1}^\top \P_{T-1} \s_{T-1} - \sigma_{T-1}^2 + B_T^2 \x_T \P_T \x_T.
+\end{equation}
+Next, we extract the $\x_T$ dependence from $\P_T$. Using $\P_{T-1} = \P_T + \P_T\x_T\x_T^\top \P_T$ and $\P_T = \left(\Pi_{T-1} + \x_T\x_T\right)^\dagger$, we have
+\begin{align*}
+    \P_{T-1}
+  &=
+    \P_T + \P_T\x_T\x_T^\top \P_T\\
+  &=
+    \left(\Pi_{T-1} + \x_T\x_T\right)^\dagger + \left(\Pi_{T-1} + \x_T\x_T\right)^\dagger\x_T\x_T^\top \left(\Pi_{T-1} + \x_T\x_T\right)^\dagger,
+\end{align*}
+and plugging into \eqref{eqn:full.minimax.1} yields
+\begin{align*}
+  &\max_{\x_T} \s_{T-1}^\top \left(\Pi_{T-1} + \x_T\x_T\right)^\dagger \s_{T-1}
+  +\left(\s_{T-1}^\top \left(\Pi_{T-1} + \x_T\x_T\right)^\dagger\x_T\right)^2\\
+  &\quad
+    +B_T^2 \x_T \left(\Pi_{T-1} + \x_T\x_T\right)^\dagger \x_T
+    - \sigma_{T-1}^2.
+\end{align*}
+
+We need to proceed by cases. First, assume that $\Pi_{T-1}$ is full rank. This implies that $\x_T \in \mathcal R(\Pi_{T-1})$ and we can apply the second case of Lemma~\ref{lem:pi.update} to \eqref{eqn:full.minimax.1} and arrive at
+\begin{align*}
+   & \max_{\x_T} \s_{T-1}^\top\Pi_{T-1}^\dagger\s_{T-1}
+    + \frac{
+    \left(\s_{T-1}^\top\Pi_{T-1}^\dagger\x_T\right)^2
+    }
+    {1-\x_T^\top \Pi_{T-1}^\dagger\x_T^\top}
+    +\left(
+    \s_{T-1}^\top \Pi_{T-1}^\dagger\x_T
+    +\frac{
+    \s_{T-1}^\top\Pi_{T-1}^\dagger\x_T
+    \x_T^\top \Pi_{T-1}^\dagger\x_T^\top
+    }
+    {1-\x_T^\top \Pi_{T-1}^\dagger\x_T^\top}
+  \right)^2\\
+  &\quad\quad +B_T^2\left( \x_T\Pi_{T-1}^\dagger \x_T +
+    \frac{
+    \left(\x_T^\top\Pi_{T-1}^\dagger\x_T\right)^2
+    }
+    {1-\x_T^\top \Pi_{T-1}^\dagger\x_T^\top} \right)
+    - \sigma_{T-1}^2.
+\end{align*}
+
+
+Since we assumed that $\x_T \in \mathcal R(\Pi_{T-1})$ and $\s_{T-1} \in \mathcal R(\Pi_{T-1})$ by its definition, it is without loss of generality to reparameterize the problem with $\v = \left(\Pi_{T-1}^\dagger\right)^{\frac12}\x_T$ and $\w = \left(\Pi_{T-1}^\dagger\right)^{\frac12} \s_{T-1}$ to obtain
+\begin{align*}
+    &\lefteqn{
+      \max_{\v}
+      \w^\top\w
+    + \frac{(\w^\top\v)^2}
+    {1-\v^\top\v}
+      +
+      \left(
+      \w^\top\v + \frac{\v^\top\w \v^\top\v}{1-\v^\top\v}
+      \right)^2
+      +      
+      B_T^2\v^\top\v
+      +
+      B_T^2 \frac{(\v^\top\v)^2}{1-\v^\top\v}
+      - \sigma_{T-1}^2}\\
+  &=
+    \max_{\v} \w^\top\w
+    + \frac{
+    (\w^\top\v)^2}
+    {1-\v^\top\v}
+    \left(
+    1
+    +
+    \frac{1}{1-\v^\top\v}
+    \right)
+    +
+    B_T^2
+    \frac{\v^\top\v}{1-\v^\top\v}
+    - \sigma_{T-1}^2.
+\end{align*}
+The objective is direction independent except for the $\w^\top\v$ term, which implies that we should set $\v = \alpha \w$ for some positive $\alpha$. Plugging in this value of $\v$, the optimization problem becomes finding $\alpha^*$, where
+\begin{align*}
+  \alpha^*
+  &=
+    \argmax_{\alpha\geq 0}\;
+    \alpha \left(\w^\top \w\right)^2
+    \frac{ 2-\alpha^2\w^\top\w}
+    {\left(1-\alpha^2 \w^\top\w\right)^2}
+    +
+    B_T^2\frac{\alpha^2 \w^\top\w}
+    {1-\alpha^2 \w^\top\w}\\
+  &=
+    \argmax_{\alpha\geq 0}\;
+    \alpha\w^\top\w
+    \frac{ \w^\top\w+ (\w^\top\w+B_T^2\alpha)(1- \alpha^2\w^\top\w)}
+    {\left(1-\alpha^2 \w^\top\w\right)^2}.
+\end{align*}
+The objective goes to infinity as $\alpha \rightarrow (\w^\top\w)^{-\frac12}$, but fortunately the box constraints keep it bounded. The box condition is equivalent to 
+\begin{align*}
+  &|\x_T^\top \P_T \s_{T-1}| \leq B_T\\
+  \Leftrightarrow&
+                   \left|\frac{\x_T^\top \Pi_T^\dagger \s_{T-1}}
+                   {1-\x_T^\top \Pi_T^\dagger \s_{T-1}}\right| \leq B_T\\
+    \Leftrightarrow&
+  \left|\frac{\alpha \w^\top \w}
+                   {1-\alpha^2 \w^\top \w} \right|\leq B_T.
+\end{align*}
+The left hand side is an increasing function of $\alpha$ and the inequality is satisfied for $\alpha = 0$, and hence the inequality is satisfied for all $\alpha < \alpha_{\max}$, where
+\[
+  \alpha_{\max} = \sqrt{1+\frac{4 B_T}{\w^\top\w}} - 1,
+\]
+the solution to $\alpha \w^\top \w=(1-\alpha^2 \w^\top \w)B_T$. Importantly, this in inequality implies that $1-\alpha^2 \w^\top \w$ is bounded below, and hence the maximizer for $\alpha^*$ is well defined. 
+
+Hence, we have shown that, in the case when $\x_T \in \mathcal R (\Pi_{T-1})$,
+\begin{align*}
+  &\lefteqn{
+    \max_{\x_T}\min_{\hat y_T}\max_{y_T} \s_T^\top \P_T \s_T - \sigma_T^2
+    }\\
+  &=
+    \s_{T-1}^\top \Pi_{T-1}^\dagger \s_{T-1}
+    \left( 1 + 
+        \alpha_T^*
+    \frac{ \s_{T-1}^\top \Pi_{T-1}^\dagger \s_{T-1}+
+    \left(\s_{T-1}^\top \Pi_{T-1}^\dagger \s_{T-1}+B_T^2\alpha_T^*\right)
+    \left(1- (\alpha_T^*)^2\s_{T-1}^\top \Pi_{T-1}^\dagger \s_{T-1}\right)}
+    {\left(1-(\alpha_T^*)^2 \s_{T-1}^\top \Pi_{T-1}^\dagger \s_{T-1}\right)^2}
+    \right)\\
+    &\quad- \sigma_{T-1}^2 ,
+\end{align*}
+where $\alpha_T^*$, a function of $\s_{T-1}^\top \Pi_{T-1}^\dagger \s_{T-1}$ and $B_T$, is 
+\[
+  \argmin_{0\leq \alpha \leq \alpha_{\max}}
+          \alpha
+    \frac{ \s_{T-1}^\top \Pi_{T-1}^\dagger \s_{T-1}+ (\s_{T-1}^\top \Pi_{T-1}^\dagger \s_{T-1}+B_T^2\alpha)(1- \alpha^2\s_{T-1}^\top \Pi_{T-1}^\dagger \s_{T-1})}
+    {\left(1-\alpha^2 \s_{T-1}^\top \Pi_{T-1}^\dagger \s_{T-1}\right)^2}
+\]
+for $\alpha_{\max} = \sqrt{1+\frac{4 B_T}{\s_{T-1}^\top \Pi_{T-1}^\dagger \s_{T-1}}} - 1$.
+
+In the case when $\Pi_{T-1}$ is not full rank, the adversary has the option to play $\x_T \notin \mathcal R(\Pi_{T-1})$. In this case, applying Lemma~\ref{lemma:next.covariances} to every term yields
+\begin{align*}
+    \max_{\x_T}\min_{\hat y_T}\max_{y_T} \s_T^\top \P_T \s_T - \sigma_T^2
+  &= \s_{T-1}^\top \Pi_{T-1}^\dagger \s_{T-1}
+    +B_T^2 - \sigma_{T-1}^2 
+\end{align*}
+for any $\x_T \notin \mathcal R(\Pi_{T-1})$ with $|\x_T\P_T\s_{T-1}| \leq B_T$.
+
+All in all, the backwards induction applied to the last round yields
+\[
+  \max_{\x_T}\min_{\hat y_T}\max_{y_T} \s_T^\top \P_T \s_T - \sigma_T^2
+  = \s_{T-1}^\top \Pi_{T-1}^\dagger \s_{T-1} - \sigma_{T-1}^2 + G
+\]
+where
+\begin{equation*}
+  G =
+  \begin{cases}
+        \alpha_T^*
+    \frac{ \s_{T-1}^\top \Pi_{T-1}^\dagger \s_{T-1}+
+    \left(\s_{T-1}^\top \Pi_{T-1}^\dagger \s_{T-1}+B_T^2\alpha_T^*\right)
+    \left(1- (\alpha_T^*)^2\s_{T-1}^\top \Pi_{T-1}^\dagger \s_{T-1}\right)}
+  {\left(1-(\alpha_T^*)^2 \s_{T-1}^\top \Pi_{T-1}^\dagger \s_{T-1}\right)^2}&
+  \text{ if $\Pi_{T-1}$ is full rank}\\
+  \max\left\{ B_T^2,
+          \alpha_T^*
+    \frac{ \s_{T-1}^\top \Pi_{T-1}^\dagger \s_{T-1}+
+    \left(\s_{T-1}^\top \Pi_{T-1}^\dagger \s_{T-1}+B_T^2\alpha_T^*\right)
+    \left(1- (\alpha_T^*)^2\s_{T-1}^\top \Pi_{T-1}^\dagger \s_{T-1}\right)}
+  {\left(1-(\alpha_T^*)^2 \s_{T-1}^\top \Pi_{T-1}^\dagger \s_{T-1}\right)^2}
+\right\}&
+\text{ otherwise.}
+  \end{cases}
+\end{equation*}
+
+\end{proof}
+We observe that, in the second case, the maximum could be either term, corresponding to the adversary playing $\x_T \notin \mathcal R(\Pi_{T-1})$ or $\x_T = \alpha_T^* \left(\Pi_{T-1}^\dagger\right)^{\frac12} \s_{T-1}$, respectively. However, in the later case, the value function obviously ceases to be quadratic and the next step of the backwards induction does in intractable.
+
+\end{document}
